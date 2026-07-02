@@ -13,7 +13,7 @@
     "react": "^18.2.0",
     "react-arborist": "^3.12.0",
     "react-dom": "^18.2.0",
-    "react-window": "^2.2.7",
+    "react-window": "^1.8.11",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
