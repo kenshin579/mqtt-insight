@@ -18,3 +18,24 @@ func TestMemoryStoreRecordUpdatesTreeAndBuffer(t *testing.T) {
 		t.Fatal("tree should have one top-level node")
 	}
 }
+
+func TestMemoryStoreIsolatesPayloadBytes(t *testing.T) {
+	s := NewMemoryStore(5)
+	orig := []byte("abc")
+	s.Record(mqtt.Message{Topic: "t", Payload: orig, Timestamp: time.Unix(1, 0)})
+
+	orig[0] = 'X' // mutate caller's buffer after recording
+
+	if got := s.History("t"); string(got[0].Payload) != "abc" {
+		t.Fatalf("history payload corrupted by caller mutation: got %s", got[0].Payload)
+	}
+	leaf := s.TreeSnapshot().Children[0]
+	if string(leaf.LastPayload) != "abc" {
+		t.Fatalf("tree payload corrupted by caller mutation: got %s", leaf.LastPayload)
+	}
+
+	s.History("t")[0].Payload[0] = 'Y' // mutate returned copy; store must be unaffected
+	if got := s.History("t"); string(got[0].Payload) != "abc" {
+		t.Fatalf("history payload corrupted by mutating returned copy: got %s", got[0].Payload)
+	}
+}

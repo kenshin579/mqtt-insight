@@ -25,6 +25,7 @@ func NewRingBuffer(capacity int) *RingBuffer {
 func (r *RingBuffer) Append(topic string, m mqtt.Message) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	m.Payload = append([]byte(nil), m.Payload...)
 	buf := append(r.byTopic[topic], m)
 	if len(buf) > r.capacity {
 		buf = buf[len(buf)-r.capacity:]
@@ -39,6 +40,9 @@ func (r *RingBuffer) Get(topic string) []mqtt.Message {
 	src := r.byTopic[topic]
 	out := make([]mqtt.Message, len(src))
 	copy(out, src)
+	for i := range out {
+		out[i].Payload = append([]byte(nil), out[i].Payload...)
+	}
 	return out
 }
 

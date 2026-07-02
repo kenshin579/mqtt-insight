@@ -54,7 +54,7 @@ func (t *Tree) Insert(m mqtt.Message) {
 		cur = child
 	}
 	cur.MessageCount++
-	cur.LastPayload = m.Payload
+	cur.LastPayload = append([]byte(nil), m.Payload...)
 	cur.LastSeen = m.Timestamp
 	cur.Retained = m.Retained
 }
@@ -69,7 +69,7 @@ func (t *Tree) Snapshot() *Node {
 func copyNode(n *Node) *Node {
 	cp := &Node{
 		Name: n.Name, FullTopic: n.FullTopic, MessageCount: n.MessageCount,
-		LastPayload: n.LastPayload, LastSeen: n.LastSeen, Retained: n.Retained,
+		LastPayload: append([]byte(nil), n.LastPayload...), LastSeen: n.LastSeen, Retained: n.Retained,
 	}
 	for _, c := range n.Children {
 		cp.Children = append(cp.Children, copyNode(c))
