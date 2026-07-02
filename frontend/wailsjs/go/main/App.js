@@ -10,8 +10,16 @@ export function DeleteProfile(arg1) {
   return window['go']['main']['App']['DeleteProfile'](arg1);
 }
 
+export function DisableRecording(arg1) {
+  return window['go']['main']['App']['DisableRecording'](arg1);
+}
+
 export function Disconnect() {
   return window['go']['main']['App']['Disconnect']();
+}
+
+export function EnableRecording(arg1) {
+  return window['go']['main']['App']['EnableRecording'](arg1);
 }
 
 export function GetProfiles() {

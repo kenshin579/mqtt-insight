@@ -3,7 +3,7 @@ import { Tree, NodeApi } from "react-arborist";
 import { useAppStore } from "../store/appStore";
 import { bytesToString } from "../lib/payload";
 import type { TreeNode } from "../types";
-import { Subscribe } from "../../wailsjs/go/main/App";
+import { Subscribe, EnableRecording } from "../../wailsjs/go/main/App";
 
 interface ArboristNode { id: string; name: string; count: number; preview: string; children?: ArboristNode[]; }
 
@@ -40,7 +40,16 @@ export function TopicTree() {
         onSelect={(nodes: NodeApi<ArboristNode>[]) => nodes[0] && selectTopic(nodes[0].id)}
       >
         {({ node, style, dragHandle }) => (
-          <div style={style} ref={dragHandle} className="tree-row" onClick={() => node.toggle()}>
+          <div
+            style={style}
+            ref={dragHandle}
+            className="tree-row"
+            onClick={() => node.toggle()}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              EnableRecording(node.data.id);
+            }}
+          >
             <span className="tree-name">{node.data.name}</span>
             {node.data.count > 0 && <span className="tree-count">{node.data.count}</span>}
             {node.data.preview && <span className="tree-preview">{node.data.preview}</span>}

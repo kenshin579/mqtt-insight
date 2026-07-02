@@ -7,7 +7,11 @@ export function Connect(arg1:config.Profile):Promise<void>;
 
 export function DeleteProfile(arg1:string):Promise<void>;
 
+export function DisableRecording(arg1:string):Promise<void>;
+
 export function Disconnect():Promise<void>;
+
+export function EnableRecording(arg1:string):Promise<void>;
 
 export function GetProfiles():Promise<Array<config.Profile>>;
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"time"
 
 	"github.com/kenshin579/mqtt-insight/internal/app"
@@ -13,12 +14,13 @@ import (
 
 // App is the Wails-bound application.
 type App struct {
-	ctx     context.Context
-	cfg     *config.Config
-	cfgPath string
-	client  mqtt.MQTTClient
-	store   store.MessageStore
-	batcher *app.Batcher
+	ctx      context.Context
+	cfg      *config.Config
+	cfgPath  string
+	client   mqtt.MQTTClient
+	store    store.MessageStore
+	batcher  *app.Batcher
+	recorder *store.SQLiteRecorder
 }
 
 // NewApp creates the app, loading persisted config.
@@ -31,9 +33,16 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.store = store.NewMemoryStore(a.cfg.Settings.RingBufferSize)
+	recPath := filepath.Join(filepath.Dir(a.cfgPath), "recordings.db")
+	if rec, err := store.NewSQLiteRecorder(recPath); err == nil {
+		a.recorder = rec
+	}
 	a.batcher = app.NewBatcher(50*time.Millisecond, func(ms []mqtt.Message) {
 		for _, m := range ms {
 			a.store.Record(m)
+			if a.recorder != nil {
+				a.recorder.Record(m)
+			}
 		}
 		runtime.EventsEmit(a.ctx, "mqtt:messages", ms)
 		runtime.EventsEmit(a.ctx, "mqtt:tree", a.store.TreeSnapshot())
@@ -47,6 +56,9 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	if a.client != nil {
 		_ = a.client.Disconnect()
+	}
+	if a.recorder != nil {
+		a.recorder.Close()
 	}
 }
 
@@ -151,4 +163,18 @@ func (a *App) History(topic string) []mqtt.Message {
 		return nil
 	}
 	return a.store.History(topic)
+}
+
+// EnableRecording starts persisting a topic to SQLite.
+func (a *App) EnableRecording(topic string) {
+	if a.recorder != nil {
+		a.recorder.Enable(topic)
+	}
+}
+
+// DisableRecording stops persisting a topic.
+func (a *App) DisableRecording(topic string) {
+	if a.recorder != nil {
+		a.recorder.Disable(topic)
+	}
 }
