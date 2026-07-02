@@ -58,3 +58,11 @@ type MQTTClient interface {
 	Publish(m Message) error
 	Disconnect() error
 }
+
+// New returns a version-specific client. Defaults to 5.0 for unknown versions.
+func New(version string) MQTTClient {
+	if version == "3.1.1" {
+		return newV3Client()
+	}
+	return newV5Client()
+}
