@@ -13,14 +13,41 @@ import (
 
 // v5Client implements MQTTClient over MQTT 5.0 using autopaho.
 type v5Client struct {
-	cm   *autopaho.ConnectionManager
-	cb   Callbacks
-	ctx  context.Context
-	mu   sync.Mutex
-	subs []Subscription // remembered so OnConnectionUp can re-apply
+	cm      *autopaho.ConnectionManager
+	cb      Callbacks
+	ctx     context.Context
+	mu      sync.Mutex
+	subs    []Subscription // remembered so OnConnectionUp can re-apply
+	lastErr error          // last async connect error, surfaced on Connect failure
 }
 
 func newV5Client() *v5Client { return &v5Client{} }
+
+// rememberSub records a subscription, replacing any existing entry for the same topic.
+func (v *v5Client) rememberSub(sub Subscription) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	filtered := v.subs[:0]
+	for _, s := range v.subs {
+		if s.Topic != sub.Topic {
+			filtered = append(filtered, s)
+		}
+	}
+	v.subs = append(filtered, sub)
+}
+
+// forgetSub removes all remembered subscriptions for a topic.
+func (v *v5Client) forgetSub(topic string) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	filtered := v.subs[:0]
+	for _, s := range v.subs {
+		if s.Topic != topic {
+			filtered = append(filtered, s)
+		}
+	}
+	v.subs = filtered
+}
 
 func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbacks) error {
 	v.cb = cb
@@ -41,19 +68,22 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		CleanStartOnInitialConnection: cfg.CleanSession,
 		TlsCfg:                        tc,
 		OnConnectionUp: func(cm *autopaho.ConnectionManager, _ *paho.Connack) {
-			if v.cb.OnConnect != nil {
-				v.cb.OnConnect()
-			}
 			v.mu.Lock()
 			subs := append([]Subscription(nil), v.subs...)
 			v.mu.Unlock()
 			for _, s := range subs {
-				_, _ = cm.Subscribe(ctx, &paho.Subscribe{
+				_, _ = cm.Subscribe(v.ctx, &paho.Subscribe{
 					Subscriptions: []paho.SubscribeOptions{{Topic: s.Topic, QoS: s.QoS}},
 				})
 			}
+			if v.cb.OnConnect != nil {
+				v.cb.OnConnect()
+			}
 		},
 		OnConnectError: func(err error) {
+			v.mu.Lock()
+			v.lastErr = err
+			v.mu.Unlock()
 			if v.cb.OnConnectionLost != nil {
 				v.cb.OnConnectionLost(err)
 			}
@@ -61,6 +91,9 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		ClientConfig: paho.ClientConfig{
 			ClientID: cfg.ClientID,
 			OnClientError: func(err error) {
+				v.mu.Lock()
+				v.lastErr = err
+				v.mu.Unlock()
 				if v.cb.OnConnectionLost != nil {
 					v.cb.OnConnectionLost(err)
 				}
@@ -95,16 +128,29 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 	if err != nil {
 		return err
 	}
-	v.cm = cm
 	connCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	return cm.AwaitConnection(connCtx)
+	if err := cm.AwaitConnection(connCtx); err != nil {
+		// Tear down the background retry loop so a failed Connect doesn't leak a
+		// goroutine that keeps hammering the broker forever.
+		_ = cm.Disconnect(context.Background())
+		v.mu.Lock()
+		le := v.lastErr
+		v.mu.Unlock()
+		if le != nil {
+			return le
+		}
+		return err
+	}
+	v.cm = cm
+	return nil
 }
 
 func (v *v5Client) Subscribe(sub Subscription) error {
-	v.mu.Lock()
-	v.subs = append(v.subs, sub)
-	v.mu.Unlock()
+	if v.cm == nil {
+		return fmt.Errorf("not connected")
+	}
+	v.rememberSub(sub)
 	_, err := v.cm.Subscribe(v.ctx, &paho.Subscribe{
 		Subscriptions: []paho.SubscribeOptions{{Topic: sub.Topic, QoS: sub.QoS}},
 	})
@@ -112,19 +158,18 @@ func (v *v5Client) Subscribe(sub Subscription) error {
 }
 
 func (v *v5Client) Unsubscribe(topic string) error {
-	v.mu.Lock()
-	for i, s := range v.subs {
-		if s.Topic == topic {
-			v.subs = append(v.subs[:i], v.subs[i+1:]...)
-			break
-		}
+	if v.cm == nil {
+		return fmt.Errorf("not connected")
 	}
-	v.mu.Unlock()
+	v.forgetSub(topic)
 	_, err := v.cm.Unsubscribe(v.ctx, &paho.Unsubscribe{Topics: []string{topic}})
 	return err
 }
 
 func (v *v5Client) Publish(m Message) error {
+	if v.cm == nil {
+		return fmt.Errorf("not connected")
+	}
 	pub := &paho.Publish{Topic: m.Topic, QoS: m.QoS, Retain: m.Retained, Payload: m.Payload}
 	if m.ContentType != "" || len(m.UserProps) > 0 {
 		props := &paho.PublishProperties{ContentType: m.ContentType}
