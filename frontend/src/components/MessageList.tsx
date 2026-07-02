@@ -28,6 +28,12 @@ export function MessageList() {
     setRecorded([]);
   }, [selectedTopic]);
 
+  // If recording is disabled for the topic while viewing Recorded, the toggle
+  // disappears — fall back to live so the view can't get stuck.
+  useEffect(() => {
+    if (!isRecorded) setSource("live");
+  }, [isRecorded]);
+
   useEffect(() => {
     if (!selectedTopic) { setHistory([]); return; }
     History(selectedTopic).then((h) => setHistory((h || []) as unknown as Message[]));
