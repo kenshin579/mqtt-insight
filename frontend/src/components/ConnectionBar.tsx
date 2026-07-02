@@ -1,7 +1,7 @@
 import { useAppStore } from "../store/appStore";
 import { Disconnect } from "../../wailsjs/go/main/App";
 
-export function ConnectionBar({ onOpenConnect }: { onOpenConnect: () => void }) {
+export function ConnectionBar({ onOpenConnect, onOpenSettings }: { onOpenConnect: () => void; onOpenSettings?: () => void }) {
   const { status, statusText } = useAppStore();
   return (
     <div className="conn-bar">
@@ -12,6 +12,7 @@ export function ConnectionBar({ onOpenConnect }: { onOpenConnect: () => void }) 
       ) : (
         <button onClick={onOpenConnect}>Connect…</button>
       )}
+      {onOpenSettings && <button onClick={onOpenSettings} title="Settings">⚙</button>}
     </div>
   );
 }
