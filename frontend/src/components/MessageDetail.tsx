@@ -13,6 +13,7 @@ export function MessageDetail({ msg }: { msg: Message }) {
       </div>
       <pre className="payload">{formatPayload(msg.payload, fmt)}</pre>
       {msg.contentType && <div className="meta">content-type: {msg.contentType}</div>}
+      {msg.responseTopic && <div className="meta">response-topic: {msg.responseTopic}</div>}
       {msg.userProps?.map((u, i) => <div key={i} className="meta">{u.key}: {u.value}</div>)}
     </div>
   );

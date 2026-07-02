@@ -52,3 +52,6 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .src-toggle { display: flex; gap: 2px; }
 .src-toggle button { background: var(--border); }
 .src-toggle button.on { background: var(--accent); }
+.props-toggle { background: none; color: var(--text); text-align: left; padding: 2px 0; font-size: 12px; }
+.props-section { display: flex; flex-direction: column; gap: 4px; }
+.props-section input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; }
