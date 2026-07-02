@@ -36,3 +36,6 @@ vendor/
 
 # Logs
 *.log
+
+# Superpowers brainstorm
+.superpowers/
