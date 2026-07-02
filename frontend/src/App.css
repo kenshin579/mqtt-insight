@@ -49,3 +49,6 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .context-menu button { background: none; color: var(--text); text-align: left; padding: 6px 10px; border-radius: 4px; }
 .context-menu button:hover:not(:disabled) { background: var(--accent); color: #fff; }
 .context-menu button:disabled { opacity: .4; cursor: default; }
+.src-toggle { display: flex; gap: 2px; }
+.src-toggle button { background: var(--border); }
+.src-toggle button.on { background: var(--accent); }
