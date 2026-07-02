@@ -25,12 +25,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         <label>Ring buffer size (per topic)
           <input type="number" value={s.ringBufferSize} onChange={(e) => setS(config.Settings.createFrom({ ...s, ringBufferSize: +e.target.value }))} />
         </label>
-        <label>Default format
-          <select value={s.defaultFormat} onChange={(e) => setS(config.Settings.createFrom({ ...s, defaultFormat: e.target.value }))}>
-            <option value="plain">plain</option><option value="json">json</option>
-            <option value="hex">hex</option><option value="base64">base64</option>
-          </select>
-        </label>
         <p className="meta">Ring buffer size applies after restart.</p>
         <div className="modal-actions"><button onClick={save}>Save</button><button onClick={onClose}>Cancel</button></div>
       </div>

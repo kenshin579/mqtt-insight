@@ -26,6 +26,7 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .tree-row:hover { background: rgba(255,255,255,.05); }
 .tree-count { font-size: 10px; background: var(--accent); border-radius: 8px; padding: 0 5px; }
 .tree-preview { color: #8a8a96; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
+.rec-dot { color: #e5484d; font-size: 10px; }
 .msg-toolbar, .detail-toolbar { display: flex; gap: 6px; align-items: center; padding: 4px 8px; border-bottom: 1px solid var(--border); }
 .msg-toolbar span:first-child { flex: 1; }
 .msg-split { display: flex; height: calc(100% - 30px); }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { FixedSizeList } from "react-window";
 import { useAppStore } from "../store/appStore";
 import { History } from "../../wailsjs/go/main/App";
@@ -16,18 +16,13 @@ export function MessageList() {
   const [selected, setSelected] = useState<Message | null>(null);
 
   useEffect(() => {
-    // Note: History() is typed as Promise<mqtt.Message[]> by wailsjs codegen
-    // (payload: number[]), but at runtime payload arrives as a base64 string,
-    // matching our local Message type (types.ts). Cast to bridge the two.
-    if (selectedTopic) History(selectedTopic).then((h) => setHistory((h || []) as unknown as Message[]));
-    else setHistory([]);
-  }, [selectedTopic]);
+    if (!selectedTopic) { setHistory([]); return; }
+    History(selectedTopic).then((h) => setHistory((h || []) as unknown as Message[]));
+  }, [selectedTopic, liveMessages]);
 
-  const rows = useMemo(() => {
-    if (!selectedTopic) return liveMessages;
-    const live = liveMessages.filter((m) => m.topic === selectedTopic);
-    return [...history, ...live];
-  }, [selectedTopic, history, liveMessages]);
+  // For a selected topic, the backend ring buffer (History) is authoritative and already
+  // includes live messages; for no selection, show the cross-topic live stream.
+  const rows = selectedTopic ? history : liveMessages;
 
   return (
     <div className="msg-list">
@@ -51,7 +46,7 @@ export function MessageList() {
             );
           }}
         </FixedSizeList>
-        {selected && <MessageDetail msg={selected} />}
+        {selected && <MessageDetail key={`${selected.topic}-${selected.timestamp}`} msg={selected} />}
       </div>
     </div>
   );

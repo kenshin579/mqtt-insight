@@ -62,6 +62,9 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		return err
 	}
 
+	// Note: autopaho always manages reconnection internally (it maintains its own
+	// background retry loop regardless of configuration), so cfg.AutoReconnect is
+	// effectively always-on for v5. It's honored explicitly only for v3 (see v3.go).
 	acfg := autopaho.ClientConfig{
 		ServerUrls:                    []*url.URL{u},
 		KeepAlive:                     uint16(cfg.KeepAlive),

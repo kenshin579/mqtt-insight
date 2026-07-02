@@ -3,7 +3,7 @@ import { Tree, NodeApi } from "react-arborist";
 import { useAppStore } from "../store/appStore";
 import { bytesToString } from "../lib/payload";
 import type { TreeNode } from "../types";
-import { Subscribe, EnableRecording } from "../../wailsjs/go/main/App";
+import { Subscribe, EnableRecording, DisableRecording } from "../../wailsjs/go/main/App";
 
 interface ArboristNode { id: string; name: string; count: number; preview: string; children?: ArboristNode[]; }
 
@@ -22,6 +22,7 @@ export function TopicTree() {
   const tree = useAppStore((s) => s.tree);
   const selectTopic = useAppStore((s) => s.selectTopic);
   const [filter, setFilter] = useState("");
+  const [recording, setRecording] = useState<Set<string>>(new Set());
   const data = useMemo(() => toArborist(tree ?? undefined), [tree]);
 
   return (
@@ -47,9 +48,16 @@ export function TopicTree() {
             onClick={() => node.toggle()}
             onContextMenu={(e) => {
               e.preventDefault();
-              EnableRecording(node.data.id);
+              const id = node.data.id;
+              setRecording((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) { next.delete(id); DisableRecording(id); }
+                else { next.add(id); EnableRecording(id); }
+                return next;
+              });
             }}
           >
+            {recording.has(node.data.id) && <span className="rec-dot" title="recording">●</span>}
             <span className="tree-name">{node.data.name}</span>
             {node.data.count > 0 && <span className="tree-count">{node.data.count}</span>}
             {node.data.preview && <span className="tree-preview">{node.data.preview}</span>}

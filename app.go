@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/kenshin579/mqtt-insight/internal/app"
@@ -17,6 +18,7 @@ type App struct {
 	ctx      context.Context
 	cfg      *config.Config
 	cfgPath  string
+	mu       sync.Mutex
 	client   mqtt.MQTTClient
 	store    store.MessageStore
 	batcher  *app.Batcher
@@ -105,11 +107,14 @@ func (a *App) SaveSettings(s config.Settings) error {
 
 // Connect opens a connection using a profile.
 func (a *App) Connect(p config.Profile) error {
+	a.mu.Lock()
 	if a.client != nil {
 		_ = a.client.Disconnect()
 	}
 	a.store.Clear()
-	a.client = mqtt.New(p.Version)
+	client := mqtt.New(p.Version)
+	a.client = client
+	a.mu.Unlock()
 	cfg := mqtt.ConnectionConfig{
 		Host: p.Host, Port: p.Port, Transport: p.Transport, Version: p.Version,
 		ClientID: p.ClientID, Username: p.Username, Password: p.Password,
@@ -118,7 +123,7 @@ func (a *App) Connect(p config.Profile) error {
 		WSPath: p.WSPath, WillTopic: p.WillTopic, WillPayload: p.WillPayload,
 		WillQoS: p.WillQoS, WillRetained: p.WillRetained,
 	}
-	return a.client.Connect(a.ctx, cfg, mqtt.Callbacks{
+	return client.Connect(a.ctx, cfg, mqtt.Callbacks{
 		OnMessage:        func(m mqtt.Message) { a.batcher.Add(m) },
 		OnConnect:        func() { runtime.EventsEmit(a.ctx, "mqtt:status", "connected") },
 		OnConnectionLost: func(err error) { runtime.EventsEmit(a.ctx, "mqtt:status", "disconnected: "+err.Error()) },
@@ -127,34 +132,46 @@ func (a *App) Connect(p config.Profile) error {
 
 // Disconnect closes the active connection.
 func (a *App) Disconnect() error {
-	if a.client == nil {
+	a.mu.Lock()
+	c := a.client
+	a.mu.Unlock()
+	if c == nil {
 		return nil
 	}
-	return a.client.Disconnect()
+	return c.Disconnect()
 }
 
 // Subscribe subscribes to a topic filter.
 func (a *App) Subscribe(topic string, qos byte) error {
-	if a.client == nil {
+	a.mu.Lock()
+	c := a.client
+	a.mu.Unlock()
+	if c == nil {
 		return nil
 	}
-	return a.client.Subscribe(mqtt.Subscription{Topic: topic, QoS: qos})
+	return c.Subscribe(mqtt.Subscription{Topic: topic, QoS: qos})
 }
 
 // Unsubscribe removes a subscription.
 func (a *App) Unsubscribe(topic string) error {
-	if a.client == nil {
+	a.mu.Lock()
+	c := a.client
+	a.mu.Unlock()
+	if c == nil {
 		return nil
 	}
-	return a.client.Unsubscribe(topic)
+	return c.Unsubscribe(topic)
 }
 
 // Publish publishes a message.
 func (a *App) Publish(m mqtt.Message) error {
-	if a.client == nil {
+	a.mu.Lock()
+	c := a.client
+	a.mu.Unlock()
+	if c == nil {
 		return nil
 	}
-	return a.client.Publish(m)
+	return c.Publish(m)
 }
 
 // History returns buffered messages for a topic.

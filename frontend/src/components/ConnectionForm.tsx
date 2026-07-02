@@ -15,6 +15,7 @@ export function ConnectionForm({ onClose }: { onClose: () => void }) {
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [p, setP] = useState<config.Profile>(config.Profile.createFrom(empty));
   const setStatus = useAppStore((s) => s.setStatus);
+  const clear = useAppStore((s) => s.clear);
 
   useEffect(() => { GetProfiles().then((r) => setProfiles(r || [])); }, []);
 
@@ -23,6 +24,7 @@ export function ConnectionForm({ onClose }: { onClose: () => void }) {
 
   async function connect() {
     await SaveProfile(p);
+    clear();
     setStatus("connecting", "connecting…");
     try {
       await Connect(p);
@@ -58,6 +60,34 @@ export function ConnectionForm({ onClose }: { onClose: () => void }) {
         <label>Client ID <input value={p.clientId} onChange={(e) => upd("clientId", e.target.value)} /></label>
         <label>Username <input value={p.username} onChange={(e) => upd("username", e.target.value)} /></label>
         <label>Password <input type="password" value={p.password} onChange={(e) => upd("password", e.target.value)} /></label>
+        <label>Keep-alive (s) <input type="number" value={p.keepAlive} onChange={(e) => upd("keepAlive", +e.target.value)} /></label>
+        <label style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={p.cleanSession} onChange={(e) => upd("cleanSession", e.target.checked)} /> Clean session
+        </label>
+        <label style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={p.autoReconnect} onChange={(e) => upd("autoReconnect", e.target.checked)} /> Auto-reconnect
+        </label>
+        {(p.transport === "ws" || p.transport === "wss") && (
+          <label>WebSocket path <input value={p.wsPath} onChange={(e) => upd("wsPath", e.target.value)} /></label>
+        )}
+        {(p.transport === "tls" || p.transport === "wss") && (
+          <>
+            <label>CA cert path <input value={p.caCertPath} onChange={(e) => upd("caCertPath", e.target.value)} /></label>
+            <label style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <input type="checkbox" checked={p.useSystemCAs} onChange={(e) => upd("useSystemCAs", e.target.checked)} /> Use system CA store
+            </label>
+          </>
+        )}
+        <label>Will topic (LWT) <input value={p.willTopic} onChange={(e) => upd("willTopic", e.target.value)} /></label>
+        <label>Will payload <input value={p.willPayload} onChange={(e) => upd("willPayload", e.target.value)} /></label>
+        <label>Will QoS
+          <select value={p.willQos} onChange={(e) => upd("willQos", +e.target.value)}>
+            <option value={0}>0</option><option value={1}>1</option><option value={2}>2</option>
+          </select>
+        </label>
+        <label style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={p.willRetained} onChange={(e) => upd("willRetained", e.target.checked)} /> Will retained
+        </label>
         {(p.transport === "tls" || p.transport === "wss") && (
           <label style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <input type="checkbox" checked={p.skipVerify} onChange={(e) => upd("skipVerify", e.target.checked)} /> Skip TLS verification (dev)
