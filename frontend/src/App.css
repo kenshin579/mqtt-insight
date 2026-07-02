@@ -45,3 +45,7 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .pub-row { display: flex; gap: 6px; align-items: center; }
 .pub-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; }
 .publish-panel textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px; border-radius: 4px; resize: none; font-family: monospace; }
+.context-menu { position: fixed; z-index: 1000; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 4px; display: flex; flex-direction: column; min-width: 170px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+.context-menu button { background: none; color: var(--text); text-align: left; padding: 6px 10px; border-radius: 4px; }
+.context-menu button:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.context-menu button:disabled { opacity: .4; cursor: default; }
