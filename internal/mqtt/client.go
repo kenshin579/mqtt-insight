@@ -48,6 +48,7 @@ type Callbacks struct {
 	OnMessage        func(Message)
 	OnConnect        func()
 	OnConnectionLost func(error)
+	OnReconnecting   func(attempt int) // fired per reconnect attempt
 }
 
 // MQTTClient abstracts a version-specific MQTT connection.

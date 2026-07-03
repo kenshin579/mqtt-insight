@@ -34,6 +34,23 @@ func TestV3SubDedupAndForget(t *testing.T) {
 	}
 }
 
+func TestV3ReconnectingCallbackCounts(t *testing.T) {
+	v := newV3Client()
+	var got []int
+	v.cb = Callbacks{OnReconnecting: func(n int) { got = append(got, n) }}
+	// simulate what SetReconnectingHandler does
+	for i := 0; i < 3; i++ {
+		v.mu.Lock()
+		v.attempts++
+		n := v.attempts
+		v.mu.Unlock()
+		v.cb.OnReconnecting(n)
+	}
+	if len(got) != 3 || got[2] != 3 {
+		t.Fatalf("want [1 2 3], got %v", got)
+	}
+}
+
 func TestClientsReturnErrorBeforeConnect(t *testing.T) {
 	for _, c := range []MQTTClient{newV3Client(), newV5Client()} {
 		if err := c.Subscribe(Subscription{Topic: "t"}); err == nil {

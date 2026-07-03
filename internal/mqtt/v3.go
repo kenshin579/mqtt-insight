@@ -11,10 +11,11 @@ import (
 
 // v3Client implements MQTTClient over MQTT 3.1.1.
 type v3Client struct {
-	client paho3.Client
-	cb     Callbacks
-	mu     sync.Mutex
-	subs   []Subscription // remembered so reconnect can re-apply
+	client   paho3.Client
+	cb       Callbacks
+	mu       sync.Mutex
+	subs     []Subscription // remembered so reconnect can re-apply
+	attempts int            // reconnect attempts since last successful connect
 }
 
 func newV3Client() *v3Client { return &v3Client{} }
@@ -83,6 +84,7 @@ func (v *v3Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		// so re-apply remembered subscriptions on every (re)connect.
 		v.mu.Lock()
 		subs := append([]Subscription(nil), v.subs...)
+		v.attempts = 0
 		v.mu.Unlock()
 		for _, s := range subs {
 			c.Subscribe(s.Topic, s.QoS, func(_ paho3.Client, m paho3.Message) { v.emit(m) })
@@ -96,13 +98,28 @@ func (v *v3Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 			v.cb.OnConnectionLost(err)
 		}
 	})
+	opts.SetReconnectingHandler(func(_ paho3.Client, _ *paho3.ClientOptions) {
+		v.mu.Lock()
+		v.attempts++
+		n := v.attempts
+		v.mu.Unlock()
+		if v.cb.OnReconnecting != nil {
+			v.cb.OnReconnecting(n)
+		}
+	})
 
 	v.client = paho3.NewClient(opts)
 	t := v.client.Connect()
-	if !t.WaitTimeout(30 * time.Second) {
+	done := make(chan struct{})
+	go func() { t.Wait(); close(done) }()
+	select {
+	case <-done:
+		return t.Error()
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(30 * time.Second):
 		return fmt.Errorf("connect timeout")
 	}
-	return t.Error()
 }
 
 func (v *v3Client) Subscribe(sub Subscription) error {

@@ -15,14 +15,15 @@ import (
 
 // App is the Wails-bound application.
 type App struct {
-	ctx      context.Context
-	cfg      *config.Config
-	cfgPath  string
-	mu       sync.Mutex
-	client   mqtt.MQTTClient
-	store    store.MessageStore
-	batcher  *app.Batcher
-	recorder *store.SQLiteRecorder
+	ctx        context.Context
+	cfg        *config.Config
+	cfgPath    string
+	mu         sync.Mutex
+	client     mqtt.MQTTClient
+	store      store.MessageStore
+	batcher    *app.Batcher
+	recorder   *store.SQLiteRecorder
+	connCancel context.CancelFunc
 }
 
 // NewApp creates the app, loading persisted config.
@@ -111,13 +112,20 @@ func (a *App) SaveSettings(s config.Settings) error {
 // Connect opens a connection using a profile.
 func (a *App) Connect(p config.Profile) error {
 	a.mu.Lock()
+	if a.connCancel != nil {
+		a.connCancel() // tear down any previous connection lifetime ctx
+	}
 	if a.client != nil {
 		_ = a.client.Disconnect()
 	}
 	a.store.Clear()
 	client := mqtt.New(p.Version)
 	a.client = client
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.connCancel = cancel
 	a.mu.Unlock()
+
+	a.emitStatus("connecting", 0, "")
 	cfg := mqtt.ConnectionConfig{
 		Host: p.Host, Port: p.Port, Transport: p.Transport, Version: p.Version,
 		ClientID: p.ClientID, Username: p.Username, Password: p.Password,
@@ -126,18 +134,46 @@ func (a *App) Connect(p config.Profile) error {
 		WSPath: p.WSPath, WillTopic: p.WillTopic, WillPayload: p.WillPayload,
 		WillQoS: p.WillQoS, WillRetained: p.WillRetained,
 	}
-	return client.Connect(a.ctx, cfg, mqtt.Callbacks{
+	err := client.Connect(ctx, cfg, mqtt.Callbacks{
 		OnMessage:        func(m mqtt.Message) { a.batcher.Add(m) },
-		OnConnect:        func() { runtime.EventsEmit(a.ctx, "mqtt:status", "connected") },
-		OnConnectionLost: func(err error) { runtime.EventsEmit(a.ctx, "mqtt:status", "disconnected: "+err.Error()) },
+		OnConnect:        func() { a.emitStatus("connected", 0, "") },
+		OnConnectionLost: func(err error) { a.emitStatus("disconnected", 0, err.Error()) },
+		OnReconnecting:   func(attempt int) { a.emitStatus("reconnecting", attempt, "") },
 	})
+	if err != nil {
+		a.emitStatus("disconnected", 0, err.Error())
+	}
+	return err
+}
+
+// emitStatus sends a structured status event to the frontend.
+func (a *App) emitStatus(state string, attempt int, reason string) {
+	runtime.EventsEmit(a.ctx, "mqtt:status", map[string]any{
+		"state": state, "attempt": attempt, "reason": reason,
+	})
+}
+
+// CancelConnect aborts an in-flight connection attempt (or tears down the
+// current connection lifetime context).
+func (a *App) CancelConnect() {
+	a.mu.Lock()
+	cancel := a.connCancel
+	a.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	a.emitStatus("disconnected", 0, "")
 }
 
 // Disconnect closes the active connection.
 func (a *App) Disconnect() error {
 	a.mu.Lock()
 	c := a.client
+	cancel := a.connCancel
 	a.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 	if c == nil {
 		return nil
 	}

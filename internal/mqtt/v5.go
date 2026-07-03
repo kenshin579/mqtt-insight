@@ -13,12 +13,14 @@ import (
 
 // v5Client implements MQTTClient over MQTT 5.0 using autopaho.
 type v5Client struct {
-	cm      *autopaho.ConnectionManager
-	cb      Callbacks
-	ctx     context.Context
-	mu      sync.Mutex
-	subs    []Subscription // remembered so OnConnectionUp can re-apply
-	lastErr error          // last async connect error, surfaced on Connect failure
+	cm            *autopaho.ConnectionManager
+	cb            Callbacks
+	ctx           context.Context
+	mu            sync.Mutex
+	subs          []Subscription // remembered so OnConnectionUp can re-apply
+	lastErr       error          // last async connect error, surfaced on Connect failure
+	attempts      int            // reconnect attempts since last successful connect
+	connectedOnce bool           // true once the initial connect has succeeded
 }
 
 func newV5Client() *v5Client { return &v5Client{} }
@@ -73,6 +75,8 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		OnConnectionUp: func(cm *autopaho.ConnectionManager, _ *paho.Connack) {
 			v.mu.Lock()
 			subs := append([]Subscription(nil), v.subs...)
+			v.connectedOnce = true
+			v.attempts = 0
 			v.mu.Unlock()
 			for _, s := range subs {
 				_, _ = cm.Subscribe(v.ctx, &paho.Subscribe{
@@ -86,7 +90,15 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		OnConnectError: func(err error) {
 			v.mu.Lock()
 			v.lastErr = err
+			once := v.connectedOnce
+			if once {
+				v.attempts++
+			}
+			n := v.attempts
 			v.mu.Unlock()
+			if once && v.cb.OnReconnecting != nil {
+				v.cb.OnReconnecting(n)
+			}
 			if v.cb.OnConnectionLost != nil {
 				v.cb.OnConnectionLost(err)
 			}
