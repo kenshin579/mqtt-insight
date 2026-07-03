@@ -25,8 +25,12 @@ export function ContextMenu({ x, y, items, onClose }: { x: number; y: number; it
     };
   }, [onClose]);
 
+  // F10: clamp so the menu never renders past the window edge.
+  const cx = Math.min(x, window.innerWidth - 190);
+  const cy = Math.min(y, window.innerHeight - 130);
+
   return (
-    <div ref={ref} className="context-menu" style={{ left: x, top: y }}>
+    <div ref={ref} className="context-menu" style={{ left: cx, top: cy }}>
       {items.map((it) => (
         <button
           key={it.label}

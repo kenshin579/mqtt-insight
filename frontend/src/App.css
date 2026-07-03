@@ -34,13 +34,6 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .modal input, .modal select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; }
 .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
 .saved { display: flex; gap: 4px; flex-wrap: wrap; }
-.tree-toolbar { display: flex; gap: 4px; padding: 6px; }
-.tree-toolbar input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px; border-radius: 4px; }
-.tree-row { display: flex; align-items: center; gap: 6px; padding: 0 6px; cursor: pointer; white-space: nowrap; }
-.tree-row:hover { background: rgba(255,255,255,.05); }
-.tree-count { font-size: 10px; background: var(--accent); border-radius: 8px; padding: 0 5px; }
-.tree-preview { color: #8a8a96; font-size: 11px; overflow: hidden; text-overflow: ellipsis; }
-.rec-dot { color: #e5484d; font-size: 10px; }
 .msg-toolbar, .detail-toolbar { display: flex; gap: 6px; align-items: center; padding: 4px 8px; border-bottom: 1px solid var(--border); }
 .msg-toolbar span:first-child { flex: 1; }
 .msg-split { display: flex; height: calc(100% - 30px); }
@@ -59,9 +52,10 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .pub-row { display: flex; gap: 6px; align-items: center; }
 .pub-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; }
 .publish-panel textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px; border-radius: 4px; resize: none; font-family: monospace; }
-.context-menu { position: fixed; z-index: 1000; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 4px; display: flex; flex-direction: column; min-width: 170px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
-.context-menu button { background: none; color: var(--text); text-align: left; padding: 6px 10px; border-radius: 4px; }
-.context-menu button:hover:not(:disabled) { background: var(--accent); color: #fff; }
+/* A6, B58: topic row context menu */
+.context-menu { position: fixed; z-index: 210; background: var(--modal); border: 1px solid var(--border); border-radius: 9px; padding: 4px; display: flex; flex-direction: column; min-width: 176px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.context-menu button { background: none; color: var(--text); text-align: left; padding: 7px 11px; border-radius: 6px; font-size: 12px; }
+.context-menu button:hover:not(:disabled) { background: var(--chip); }
 .context-menu button:disabled { opacity: .4; cursor: default; }
 .src-toggle { display: flex; gap: 2px; }
 .src-toggle button { background: var(--border); }
@@ -223,3 +217,37 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .tree-empty-specific { display: flex; gap: 6px; width: 100%; }
 .tree-empty-specific input { flex: 1; background: var(--input); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 7px; font-size: 12px; }
 .tree-empty-foot { font-size: 10.5px; color: var(--dim2); max-width: 280px; }
+
+/* === TopicTree (B19, B24-B26, B58) === */
+.topic-tree { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+
+.tt-filter-row { padding: 9px 11px; flex: none; }
+.tt-filter-wrap { display: flex; align-items: center; gap: 6px; background: var(--input); border-radius: 7px; padding: 5px 9px; }
+.tt-filter-glyph { font-size: 12px; color: var(--dim2); flex: none; }
+.tt-filter-input { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: var(--text); font-size: 12px; }
+
+.tt-header { padding: 6px 11px 4px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; color: var(--dim3); flex: none; }
+
+.tree-hint { display: flex; align-items: flex-start; gap: 8px; margin: 8px 10px 2px; padding: 9px 11px;
+  background: rgba(79,140,255,.08); border: 1px solid rgba(79,140,255,.25); border-radius: 8px; flex: none; }
+.tree-hint-icon { color: #6ba0ff; font-size: 12px; line-height: 1.55; flex: none; }
+.tree-hint-text { flex: 1; font-size: 11px; line-height: 1.55; color: var(--dim); }
+.tree-hint-x { flex: none; background: none; border: 0; color: var(--dim2); font-size: 11px; line-height: 1; padding: 0; cursor: pointer; }
+
+.tree-area { flex: 1; min-height: 0; overflow: auto; }
+
+.tt-row { display: flex; align-items: center; gap: 7px; height: 26px; padding-right: 8px; cursor: pointer; white-space: nowrap; }
+.tt-row:hover { background: var(--hoverbg); }
+.tt-row:hover .tt-menu-btn { opacity: 1; }
+.tt-row.sel { background: rgba(79,140,255,.16); box-shadow: inset 2px 0 0 #4f8cff; }
+.tt-row.dim { opacity: .45; }
+.tt-caret { flex: none; width: 14px; text-align: center; font-size: 9px; color: var(--dim2); }
+.tt-recdot { flex: none; font-size: 8px; color: #e5484d; }
+.tt-name { font-family: var(--font-mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }
+.tt-name.leaf { color: var(--treename); font-weight: 400; }
+.tt-name.branch { color: var(--treebranch); font-weight: 600; }
+.tt-row.sel .tt-name.leaf { color: var(--text); }
+.tt-count { flex: none; font-size: 9.5px; font-weight: 600; background: rgba(79,140,255,.18); color: #6ba0ff; border-radius: 10px; padding: 1px 6px; }
+.tt-retained { flex: none; font-size: 9px; font-weight: 700; background: rgba(217,130,43,.2); color: #d9822b; border-radius: 4px; padding: 1px 4px; cursor: help; }
+.tt-preview { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; }
+.tt-menu-btn { flex: none; margin-left: auto; background: none; border: 0; color: var(--dim); font-size: 13px; opacity: .6; padding: 0 4px; cursor: pointer; }
