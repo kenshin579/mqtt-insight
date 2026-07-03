@@ -144,3 +144,43 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .empty-icon { font-size: 22px; opacity: .5; }
 .empty-title { font-size: 12.5px; font-weight: 600; color: var(--dim); }
 .empty-hint { font-size: 11.5px; max-width: 280px; color: var(--faint); text-align: center; }
+
+/* === Connection modal (A4, B43-B52) === */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(10,10,14,.55); backdrop-filter: blur(3px); z-index: 100;
+  display: flex; align-items: center; justify-content: center; animation: fadeIn .18s ease; }
+.conn-modal { width: 460px; max-width: 92vw; max-height: 88vh; overflow: auto; background: var(--modal);
+  border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.5); padding: 20px 22px; display: flex; flex-direction: column; gap: 10px; }
+.conn-modal h3 { font-size: 17px; font-weight: 700; margin: 0; }
+.modal-sub { font-size: 12px; color: var(--dim); margin: 0 0 4px; }
+
+.chip-section { display: flex; flex-direction: column; gap: 4px; }
+.chip-label { font-size: 11px; font-weight: 700; color: var(--dim3); text-transform: uppercase; }
+.chip-hint { font-size: 11px; color: var(--dim); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.chip-row .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; border-radius: 20px; padding: 6px 12px;
+  background: var(--chip); border: 1px solid var(--border); color: var(--text2); cursor: pointer; }
+.chip-row .chip.dashed { border-style: dashed; }
+.chip-row .chip.on { background: rgba(79,140,255,.15); border-color: #4f8cff; color: var(--text); }
+.chip-row .chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: #4f8cff; }
+
+.divider-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--dim3);
+  border-top: 1px solid var(--line); padding-top: 8px; margin-top: 2px; }
+
+.tabs-row .seg button { font-size: 12px; padding: 7px 14px; }
+.tabs-row .seg button.on { background: var(--chip); color: var(--text); }
+
+.form-body { display: flex; flex-direction: column; gap: 10px; }
+.form-body.advanced { gap: 14px; }
+.form-body label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dim); }
+.form-body input, .form-body select { background: var(--input); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 10px; border-radius: 7px; font-size: 13px; }
+.form-body input.mono { font-family: var(--font-mono); }
+.hint-box { border: 1px dashed var(--btnborder); border-radius: 8px; padding: 9px 11px; font-size: 11.5px; color: var(--dim); }
+.field-group { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.field-group:first-child { border-top: none; padding-top: 0; }
+.group-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--dim3); }
+.row-check { flex-direction: row !important; align-items: center; gap: 6px !important; }
+
+.modal-footer { display: flex; gap: 8px; margin-top: 4px; }
+.btn-connect { flex: 1; background: var(--accent); color: #fff; border: 0; padding: 11px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-connect:disabled { opacity: .6; cursor: default; }
