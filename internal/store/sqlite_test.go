@@ -31,3 +31,43 @@ func TestSQLiteRecorderPersists(t *testing.T) {
 		t.Fatal("non-enabled topic must not be recorded")
 	}
 }
+
+func TestSQLiteRecorderTopics(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "rec.db")
+	r, err := NewSQLiteRecorder(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer r.Close()
+
+	if got := r.Topics(); len(got) != 0 {
+		t.Fatalf("want empty, got %v", got)
+	}
+	r.Enable("a/b")
+	r.Enable("c/d")
+	r.Disable("a/b")
+	got := r.Topics()
+	if len(got) != 1 || got[0] != "c/d" {
+		t.Fatalf("want [c/d], got %v", got)
+	}
+}
+
+func TestSQLiteRecorderQueryPreservesTimestamp(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "rec.db")
+	r, err := NewSQLiteRecorder(path)
+	if err != nil {
+		t.Fatalf("open: %v", err)
+	}
+	defer r.Close()
+
+	want := time.Unix(1234, 567)
+	r.Enable("t")
+	r.Record(mqtt.Message{Topic: "t", Payload: []byte("x"), Timestamp: want})
+	got, err := r.Query("t", 10)
+	if err != nil {
+		t.Fatalf("query: %v", err)
+	}
+	if len(got) != 1 || !got[0].Timestamp.Equal(want) {
+		t.Fatalf("timestamp not preserved: %+v", got)
+	}
+}

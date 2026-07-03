@@ -21,6 +21,10 @@ export function History(arg1:string):Promise<Array<mqtt.Message>>;
 
 export function Publish(arg1:mqtt.Message):Promise<void>;
 
+export function QueryRecorded(arg1:string,arg2:number):Promise<Array<mqtt.Message>>;
+
+export function RecordedTopics():Promise<Array<string>>;
+
 export function SaveProfile(arg1:config.Profile):Promise<void>;
 
 export function SaveSettings(arg1:config.Settings):Promise<void>;

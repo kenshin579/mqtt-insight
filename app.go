@@ -195,3 +195,23 @@ func (a *App) DisableRecording(topic string) {
 		a.recorder.Disable(topic)
 	}
 }
+
+// QueryRecorded returns up to `limit` most-recent recorded messages for a topic.
+func (a *App) QueryRecorded(topic string, limit int) []mqtt.Message {
+	if a.recorder == nil {
+		return nil
+	}
+	msgs, err := a.recorder.Query(topic, limit)
+	if err != nil {
+		return nil
+	}
+	return msgs
+}
+
+// RecordedTopics returns the topics currently being recorded.
+func (a *App) RecordedTopics() []string {
+	if a.recorder == nil {
+		return nil
+	}
+	return a.recorder.Topics()
+}

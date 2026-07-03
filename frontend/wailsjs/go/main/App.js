@@ -38,6 +38,14 @@ export function Publish(arg1) {
   return window['go']['main']['App']['Publish'](arg1);
 }
 
+export function QueryRecorded(arg1, arg2) {
+  return window['go']['main']['App']['QueryRecorded'](arg1, arg2);
+}
+
+export function RecordedTopics() {
+  return window['go']['main']['App']['RecordedTopics']();
+}
+
 export function SaveProfile(arg1) {
   return window['go']['main']['App']['SaveProfile'](arg1);
 }

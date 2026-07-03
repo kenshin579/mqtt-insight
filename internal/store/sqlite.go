@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"sync"
+	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -45,6 +46,17 @@ func (r *SQLiteRecorder) Disable(topic string) {
 	r.mu.Unlock()
 }
 
+// Topics returns the topics currently enabled for recording.
+func (r *SQLiteRecorder) Topics() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]string, 0, len(r.enabled))
+	for t := range r.enabled {
+		out = append(out, t)
+	}
+	return out
+}
+
 // Record persists a message if its topic is enabled.
 func (r *SQLiteRecorder) Record(m mqtt.Message) {
 	r.mu.RLock()
@@ -74,6 +86,7 @@ func (r *SQLiteRecorder) Query(topic string, limit int) ([]mqtt.Message, error) 
 		}
 		m.Topic = topic
 		m.Retained = ret != 0
+		m.Timestamp = time.Unix(0, ts)
 		out = append(out, m)
 	}
 	return out, rows.Err()

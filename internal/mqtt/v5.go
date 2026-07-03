@@ -110,6 +110,7 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 					}
 					if p.Properties != nil {
 						msg.ContentType = p.Properties.ContentType
+						msg.ResponseTopic = p.Properties.ResponseTopic
 						for _, up := range p.Properties.User {
 							msg.UserProps = append(msg.UserProps, UserProperty{Key: up.Key, Value: up.Value})
 						}
@@ -174,8 +175,8 @@ func (v *v5Client) Publish(m Message) error {
 		return fmt.Errorf("not connected")
 	}
 	pub := &paho.Publish{Topic: m.Topic, QoS: m.QoS, Retain: m.Retained, Payload: m.Payload}
-	if m.ContentType != "" || len(m.UserProps) > 0 {
-		props := &paho.PublishProperties{ContentType: m.ContentType}
+	if m.ContentType != "" || m.ResponseTopic != "" || len(m.UserProps) > 0 {
+		props := &paho.PublishProperties{ContentType: m.ContentType, ResponseTopic: m.ResponseTopic}
 		for _, up := range m.UserProps {
 			props.User = append(props.User, paho.UserProperty{Key: up.Key, Value: up.Value})
 		}

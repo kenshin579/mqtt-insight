@@ -91,6 +91,7 @@ export namespace mqtt {
 	    // Go type: time
 	    timestamp: any;
 	    contentType?: string;
+	    responseTopic?: string;
 	    userProps?: UserProperty[];
 	
 	    static createFrom(source: any = {}) {
@@ -105,6 +106,7 @@ export namespace mqtt {
 	        this.retained = source["retained"];
 	        this.timestamp = this.convertValues(source["timestamp"], null);
 	        this.contentType = source["contentType"];
+	        this.responseTopic = source["responseTopic"];
 	        this.userProps = this.convertValues(source["userProps"], UserProperty);
 	    }
 	

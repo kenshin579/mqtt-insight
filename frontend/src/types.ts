@@ -6,6 +6,7 @@ export interface Message {
   retained: boolean;
   timestamp: string;
   contentType?: string;
+  responseTopic?: string;
   userProps?: { key: string; value: string }[];
 }
 
