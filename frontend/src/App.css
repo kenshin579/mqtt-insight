@@ -26,7 +26,9 @@ body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(
 .tree-pane { flex: 0 0 320px; border-right: 1px solid var(--border); }
 .right-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .msg-pane { flex: 1; border-bottom: 1px solid var(--border); min-height: 0; }
-.pub-pane { flex: 0 0 200px; }
+/* .publish-panel (owned by PublishPanel.tsx) is the real flex item that sizes 176<->316px;
+   display:contents lets it be promoted past this wrapper into the .right-col flex column (B37). */
+.pub-pane { display: contents; }
 button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; border-radius: 4px; cursor: pointer; }
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; }
 .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; width: 360px; max-height: 90vh; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
@@ -36,19 +38,11 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .saved { display: flex; gap: 4px; flex-wrap: wrap; }
 .payload { margin: 0; padding: 4px 12px 14px; white-space: pre-wrap; word-break: break-all; font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--payload); }
 .meta { padding: 2px 8px; color: #8a8a96; font-size: 11px; }
-.publish-panel { display: flex; flex-direction: column; height: 100%; padding: 6px; gap: 6px; }
-.pub-row { display: flex; gap: 6px; align-items: center; }
-.pub-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; }
-.publish-panel textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 6px; border-radius: 4px; resize: none; font-family: monospace; }
 /* A6, B58: topic row context menu */
 .context-menu { position: fixed; z-index: 210; background: var(--modal); border: 1px solid var(--border); border-radius: 9px; padding: 4px; display: flex; flex-direction: column; min-width: 176px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
 .context-menu button { background: none; color: var(--text); text-align: left; padding: 7px 11px; border-radius: 6px; font-size: 12px; }
 .context-menu button:hover:not(:disabled) { background: var(--chip); }
 .context-menu button:disabled { opacity: .4; cursor: default; }
-.props-toggle { background: none; color: var(--text); text-align: left; padding: 2px 0; font-size: 12px; }
-.props-section { display: flex; flex-direction: column; gap: 4px; }
-.props-section input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 4px; border-radius: 4px; }
-
 /* === Shared utility (Task 13) === */
 .spacer { flex: 1; }
 .mono { font-family: var(--font-mono); }
@@ -285,3 +279,35 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .diff-line.added { background: rgba(67,196,99,.14); }
 .diff-line.removed { background: rgba(229,72,77,.12); text-decoration: line-through; color: var(--dim); }
 .diff-prev { color: var(--dim2); }
+
+/* === PublishPanel (B37-B42) === */
+.publish-panel { display: flex; flex-direction: column; padding: 10px 12px; gap: 8px; background: var(--pane2);
+  min-height: 0; flex: 0 0 176px; transition: flex-basis .18s ease; }
+.publish-panel.expanded { flex-basis: 316px; }
+
+.pub-header-row { display: flex; align-items: center; gap: 8px; }
+.pub-label { font-size: 10.5px; font-weight: 700; letter-spacing: .5px; color: var(--dim3); text-transform: uppercase; }
+.pub-hint { font-size: 10.5px; color: #6ba0ff; }
+
+.pub-row { display: flex; gap: 7px; align-items: center; }
+.pub-row input { flex: 1; min-width: 0; background: var(--input); border: 1px solid var(--border); border-radius: 7px;
+  padding: 8px 10px; color: var(--text); font-size: 12px; font-family: var(--font-mono); outline: none; }
+.pub-row select { background: var(--input); border: 1px solid var(--border); border-radius: 7px; padding: 8px 6px;
+  color: var(--text); font-size: 12px; outline: none; }
+.pub-retain { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--dim); cursor: pointer; white-space: nowrap; }
+.pub-retain input { accent-color: var(--accent); }
+.pub-btn { background: var(--accent); color: #fff; border: 0; padding: 8px 18px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pub-btn:disabled { background: var(--btnborder); cursor: default; }
+
+.pub-props-toggle-row { display: flex; align-items: center; gap: 8px; }
+.props-toggle { background: none; border: 0; padding: 0; font-family: inherit; font-size: 11px; font-weight: 600; color: var(--dim); text-align: left; cursor: pointer; }
+.props-toggle:disabled { opacity: .45; cursor: default; }
+.props-disabled-note { font-size: 10.5px; color: var(--dim2); }
+
+.props-section { display: flex; flex-direction: column; gap: 6px; }
+.props-section .pub-row input { font-size: 11.5px; padding: 7px 9px; }
+.prop-remove { background: none; border: 1px solid var(--btnborder); color: var(--dim); border-radius: 7px; padding: 0 9px; cursor: pointer; font-size: 11px; }
+.prop-add { align-self: flex-start; background: none; border: 1px dashed var(--btnborder); color: var(--dim); font-size: 11px; padding: 5px 11px; border-radius: 7px; cursor: pointer; }
+
+.pub-payload { flex: 1; background: var(--input); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
+  color: var(--text); font-size: 12px; resize: none; outline: none; line-height: 1.5; }
