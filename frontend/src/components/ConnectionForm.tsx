@@ -12,9 +12,11 @@ const empty = {
   willQos: 0, willRetained: false,
 };
 
-export function ConnectionForm({ onClose }: { onClose: () => void }) {
+export function ConnectionForm({ editProfile, onClose, onSaved }: {
+  editProfile?: config.Profile | null; onClose: () => void; onSaved?: () => void;
+}) {
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
-  const [p, setP] = useState<config.Profile>(config.Profile.createFrom(empty));
+  const [p, setP] = useState<config.Profile>(config.Profile.createFrom(editProfile ?? empty));
   const setStatus = useAppStore((s) => s.setStatus);
   const setConnectError = useAppStore((s) => s.setConnectError);
   const resetSession = useAppStore((s) => s.resetSession);
@@ -26,6 +28,7 @@ export function ConnectionForm({ onClose }: { onClose: () => void }) {
 
   async function connect() {
     await SaveProfile(p);
+    onSaved?.();
     resetSession();
     setStatus("connecting");
     try {
