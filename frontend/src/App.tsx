@@ -7,6 +7,7 @@ import { TopicTree } from "./components/TopicTree";
 import { MessageList } from "./components/MessageList";
 import { PublishPanel } from "./components/PublishPanel";
 import { GetSettings } from "../wailsjs/go/main/App";
+import "./lib/tokens.css";
 import "./App.css";
 
 function App() {
