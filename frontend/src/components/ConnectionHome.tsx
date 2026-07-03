@@ -6,8 +6,9 @@ import { classifyConnectError } from "../lib/connectError";
 import { t } from "../lib/i18n";
 
 // Saved-profile launcher (A2): left list + right detail/connect.
-export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged }: {
+export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onConnected }: {
   profiles: config.Profile[]; onNew: () => void; onEdit: (p: config.Profile) => void; onProfilesChanged: () => void;
+  onConnected?: (p: config.Profile) => void;
 }) {
   const [selected, setSelected] = useState<string>(profiles[0]?.name ?? "");
   const connectError = useAppStore((s) => s.connectError);
@@ -21,7 +22,10 @@ export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged }: {
     st.resetSession();
     st.setActiveVersion(p.version);
     st.setBroker(`${p.host}:${p.port}`);
-    try { await Connect(p); } catch (e) {
+    try {
+      await Connect(p);
+      onConnected?.(p);
+    } catch (e) {
       st.setBroker("");
       setConnectError(classifyConnectError(String(e), p.host));
     }

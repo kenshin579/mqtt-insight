@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { initEventBridge } from "./bridge/events";
 import { useAppStore } from "./store/appStore";
-import { GetProfiles, GetSettings, RecordedTopics } from "../wailsjs/go/main/App";
+import { Connect, GetProfiles, GetSettings, RecordedTopics } from "../wailsjs/go/main/App";
 import { config } from "../wailsjs/go/models";
-import { setLang } from "./lib/i18n";
+import { setLang, t } from "./lib/i18n";
 import { Welcome } from "./components/Welcome";
 import { ConnectionHome } from "./components/ConnectionHome";
 import { ConnectionBar } from "./components/ConnectionBar";
@@ -29,11 +29,14 @@ function App() {
   const settings = useAppStore((s) => s.settings);
   const setSettings = useAppStore((s) => s.setSettings);
   const setRecordingTopics = useAppStore((s) => s.setRecordingTopics);
+  const setActiveVersion = useAppStore((s) => s.setActiveVersion);
+  const setBroker = useAppStore((s) => s.setBroker);
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [showConnect, setShowConnect] = useState(false);
   const [editProfile, setEditProfile] = useState<config.Profile | null>(null); // C9: 편집 진입
   const [showSettings, setShowSettings] = useState(false);
   const [showGuide, setShowGuide] = useState(false); // F6
+  const [lastProfile, setLastProfile] = useState<config.Profile | null>(null); // C18: 재연결용 최근 프로필
 
   const reloadProfiles = () => GetProfiles().then((p) => setProfiles(p || []));
 
@@ -65,6 +68,13 @@ function App() {
 
   const openConnect = (edit?: config.Profile) => { setEditProfile(edit ?? null); setShowConnect(true); };
 
+  // C18: 재연결 = 데이터 보존(resetSession 없이) 즉시 Connect.
+  const reconnectWith = (p: config.Profile) => {
+    setActiveVersion(p.version);
+    setBroker(`${p.host}:${p.port}`);
+    Connect(p);
+  };
+
   return (
     <div className="layout">
       <div className="titlebar">{/* A11: 점 3개·아이콘·앱명·spacer·?·⚙ — CSS는 레지스트리 A11/B1/B2 */}
@@ -72,14 +82,14 @@ function App() {
         <span className="app-icon">◈</span>
         <span className="app-name">MQTT Insight</span>
         <span className="spacer" />
-        <button className="tb-btn" title="시작 가이드 다시 보기" onClick={() => setShowGuide(true)}>?</button>
-        <button className="tb-btn" title="설정" onClick={() => setShowSettings(true)}>⚙</button>
+        <button className="tb-btn" title={t("tourTitle")} onClick={() => setShowGuide(true)}>?</button>
+        <button className="tb-btn" title={t("setTitle")} onClick={() => setShowSettings(true)}>⚙</button>
       </div>
       <ConnectionBar onOpenConnect={() => openConnect()} />
-      <ReconnectBanner onReconnect={() => openConnect()} />
+      <ReconnectBanner onReconnect={() => lastProfile && reconnectWith(lastProfile)} />
       {view === "welcome" && <Welcome onConnect={() => openConnect()} />}
       {view === "home" && (
-        <ConnectionHome profiles={profiles} onNew={() => openConnect()} onEdit={(p) => openConnect(p)} onProfilesChanged={reloadProfiles} />
+        <ConnectionHome profiles={profiles} onNew={() => openConnect()} onEdit={(p) => openConnect(p)} onProfilesChanged={reloadProfiles} onConnected={setLastProfile} />
       )}
       {view === "app" && (
         <div className="panes">
@@ -94,7 +104,7 @@ function App() {
         <div className="guide-overlay"><Welcome onConnect={() => { setShowGuide(false); openConnect(); }} onClose={() => setShowGuide(false)} /></div>
       )}
       {showConnect && (
-        <ConnectionForm editProfile={editProfile} onClose={() => setShowConnect(false)} onSaved={reloadProfiles} />
+        <ConnectionForm editProfile={editProfile} onClose={() => setShowConnect(false)} onSaved={reloadProfiles} onConnected={setLastProfile} />
       )}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       {status === "connecting" && <ConnectingOverlay />}

@@ -16,8 +16,9 @@ const empty = (): config.Profile => config.Profile.createFrom({
 
 type Tab = "quick" | "advanced";
 
-export function ConnectionForm({ editProfile, onClose, onSaved }: {
+export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
   editProfile: config.Profile | null; onClose: () => void; onSaved: () => void;
+  onConnected?: (p: config.Profile) => void;
 }) {
   const [tab, setTab] = useState<Tab>(editProfile ? "advanced" : "quick"); // C9
   const [p, setP] = useState<config.Profile>(() => (editProfile ? config.Profile.createFrom(editProfile) : empty()));
@@ -59,6 +60,7 @@ export function ConnectionForm({ editProfile, onClose, onSaved }: {
       setActiveVersion(finalP.version);
       setBroker(`${finalP.host}:${finalP.port}`);
       await Connect(finalP);
+      onConnected?.(finalP);
       onSaved();
       onClose();
     } catch (e) {

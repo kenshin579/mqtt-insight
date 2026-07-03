@@ -1,10 +1,26 @@
 * { box-sizing: border-box; }
 body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 13px; }
 .layout { display: flex; flex-direction: column; height: 100vh; }
-.conn-bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
-.conn-bar .dot { width: 10px; height: 10px; border-radius: 50%; background: #888; }
-.conn-bar .dot.connected { background: #43c463; }
-.conn-bar .conn-text { flex: 1; }
+/* === Titlebar (A11, B1, B2) === */
+.titlebar { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 14px; background: var(--titlebar); border-bottom: 1px solid var(--border); flex: none; }
+.tl-dots { display: flex; gap: 7px; }
+.tl-dots i { width: 10px; height: 10px; border-radius: 50%; font-style: normal; }
+.tl-dots i:nth-child(1) { background: #ff5f57; }
+.tl-dots i:nth-child(2) { background: #febc2e; }
+.tl-dots i:nth-child(3) { background: #28c840; }
+.titlebar .app-icon { width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg,#4f8cff,#7b5cff);
+  display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; margin-left: 6px; }
+.titlebar .app-name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+.tb-btn { background: none; border: 1px solid var(--btnborder); color: var(--dim); width: 24px; height: 24px; border-radius: 6px;
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+/* === Connection bar (A11, B3-B7, E9) === */
+.conn-bar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; background: var(--pane); border-bottom: 1px solid var(--border); flex: none; }
+.conn-bar .dot { width: 9px; height: 9px; border-radius: 50%; background: #6a6a76; box-shadow: 0 0 0 3px rgba(120,120,130,.15); }
+.conn-bar .dot.connected { background: var(--ok); box-shadow: 0 0 0 3px rgba(67,196,99,.18); }
+.conn-bar .dot.connecting, .conn-bar .dot.reconnecting { background: var(--warn); box-shadow: 0 0 0 3px rgba(254,188,46,.18); }
+.conn-bar .status-label { font-size: 12.5px; font-weight: 600; }
+.conn-bar .broker { font-size: 12px; color: var(--dim); }
 .panes { display: flex; flex: 1; min-height: 0; }
 .pane { background: var(--panel); overflow: auto; }
 .tree-pane { flex: 0 0 320px; border-right: 1px solid var(--border); }
@@ -56,6 +72,7 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 
 /* === Shared utility (Task 13) === */
 .spacer { flex: 1; }
+.mono { font-family: var(--font-mono); }
 .btn-outline { background: none; border: 1px solid var(--btnborder); color: var(--text2); padding: 6px 13px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; }
 .btn-warn-outline { background: none; border: 1px solid rgba(254,188,46,.4); color: #e0b24a; padding: 6px 13px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
 .btn-err { background: #e5484d; border: 0; color: #fff; padding: 6px 13px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
