@@ -99,9 +99,12 @@ func (a *App) DeleteProfile(name string) error {
 	return config.Save(a.cfgPath, a.cfg)
 }
 
-// SaveSettings persists settings.
+// SaveSettings persists settings and applies changes that affect live state.
 func (a *App) SaveSettings(s config.Settings) error {
 	a.cfg.Settings = s
+	if a.store != nil {
+		a.store.SetCapacity(s.RingBufferSize)
+	}
 	return config.Save(a.cfgPath, a.cfg)
 }
 

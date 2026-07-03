@@ -32,3 +32,20 @@ func TestRingBufferPerTopicIsolation(t *testing.T) {
 		t.Fatal("unknown topic must return empty slice")
 	}
 }
+
+func TestRingBufferSetCapacityTrims(t *testing.T) {
+	rb := NewRingBuffer(10)
+	for i := 0; i < 10; i++ {
+		rb.Append("t", mqtt.Message{Topic: "t", Payload: []byte{byte('0' + i)}})
+	}
+	rb.SetCapacity(3)
+	got := rb.Get("t")
+	if len(got) != 3 || string(got[0].Payload) != "7" {
+		t.Fatalf("want last 3 (7..9), got %v", got)
+	}
+	// future appends respect new cap
+	rb.Append("t", mqtt.Message{Topic: "t", Payload: []byte("x")})
+	if len(rb.Get("t")) != 3 {
+		t.Fatal("cap not applied to new appends")
+	}
+}
