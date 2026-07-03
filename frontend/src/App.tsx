@@ -33,6 +33,7 @@ function App() {
   const setBroker = useAppStore((s) => s.setBroker);
   const dismissTreeHint = useAppStore((s) => s.dismissTreeHint);
   const markRecToastShown = useAppStore((s) => s.markRecToastShown);
+  const setFmt = useAppStore((s) => s.setFmt);
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [showConnect, setShowConnect] = useState(false);
   const [editProfile, setEditProfile] = useState<config.Profile | null>(null); // C9: 편집 진입
@@ -52,6 +53,7 @@ function App() {
       applyTheme(s.theme || "dark");
       if (s.treeHintDismissed) dismissTreeHint();
       if (s.recToastShown) markRecToastShown();
+      setFmt((s.defaultFormat as import("./store/appStore").Fmt) || "plain"); // G5: initial fmt = settings default
     });
     return cleanup;
   }, []);

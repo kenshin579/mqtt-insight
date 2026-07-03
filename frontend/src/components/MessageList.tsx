@@ -102,6 +102,16 @@ export function MessageList() {
   // D61: newest-first by default; oldest-first reverses the render order only.
   const displayRows = settings.messageOrder === "oldest" ? filtered : filtered.slice().reverse();
 
+  // B36: the message immediately preceding the current selection in the same topic's
+  // (ascending, pre-search) history — used by MessageDetail's Diff mode.
+  const prevMsg = useMemo(() => {
+    if (!selectedMsg) return null;
+    const idx = baseRows.findIndex((m) => m.topic === selectedMsg.topic && m.timestamp === selectedMsg.timestamp);
+    if (idx <= 0) return null;
+    for (let i = idx - 1; i >= 0; i--) if (baseRows[i].topic === selectedMsg.topic) return baseRows[i];
+    return null;
+  }, [baseRows, selectedMsg]);
+
   useNowTick(settings.timestampFormat === "relative"); // F25
 
   // F4: global 5s-window message rate, ticked every second so it decays back to 0.
@@ -217,7 +227,7 @@ export function MessageList() {
             </FixedSizeList>
           )}
         </div>
-        {selectedMsg && <MessageDetail msg={selectedMsg} />}
+        {selectedMsg && <MessageDetail msg={selectedMsg} prev={prevMsg} />}
       </div>
     </div>
   );
