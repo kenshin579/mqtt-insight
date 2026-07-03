@@ -201,3 +201,25 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .modal-footer { display: flex; gap: 8px; margin-top: 4px; }
 .btn-connect { flex: 1; background: var(--accent); color: #fff; border: 0; padding: 11px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-connect:disabled { opacity: .6; cursor: default; }
+
+/* === SubscriptionChips + TreeEmptyState (B20-B23, B27) === */
+.sub-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 11px; }
+.sub-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--dim3); margin-right: 2px; }
+.sub-chips .chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10.5px;
+  background: rgba(79,140,255,.13); border: 1px solid rgba(79,140,255,.35); color: #6ba0ff; border-radius: 14px; padding: 3px 4px 3px 8px; }
+.sub-chips .chip-x { background: none; border: 0; color: inherit; cursor: pointer; font-size: 10px; line-height: 1; padding: 0 2px; }
+.sub-chips .chip.add { background: none; border: 1px dashed var(--dim); color: var(--dim); font-size: 10.5px; border-radius: 14px; padding: 3px 8px; cursor: pointer; }
+
+.add-sub-row { display: flex; align-items: center; gap: 6px; width: 100%; background: var(--input); padding: 8px 11px; border-radius: 8px; margin-top: 4px; }
+.add-sub-row input.mono { flex: 1; font-family: var(--font-mono); font-size: 11.5px; background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 6px; }
+.add-sub-row select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-size: 11.5px; }
+.btn-accent.sm { padding: 5px 10px; font-size: 11px; }
+
+.tree-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 28px 20px; text-align: center; }
+.tree-empty-icon { width: 42px; height: 42px; border-radius: 12px; background: rgba(79,140,255,.12); border: 1px solid rgba(79,140,255,.3);
+  color: #6ba0ff; display: flex; align-items: center; justify-content: center; font-size: 20px; animation: ringpulse 2s infinite; }
+.btn-accent.full { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.mono-chip-inline { font-family: var(--font-mono); background: rgba(255,255,255,.2); border-radius: 5px; padding: 1px 5px; font-size: 11px; }
+.tree-empty-specific { display: flex; gap: 6px; width: 100%; }
+.tree-empty-specific input { flex: 1; background: var(--input); border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 7px; font-size: 12px; }
+.tree-empty-foot { font-size: 10.5px; color: var(--dim2); max-width: 280px; }
