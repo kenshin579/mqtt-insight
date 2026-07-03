@@ -31,6 +31,8 @@ function App() {
   const setRecordingTopics = useAppStore((s) => s.setRecordingTopics);
   const setActiveVersion = useAppStore((s) => s.setActiveVersion);
   const setBroker = useAppStore((s) => s.setBroker);
+  const dismissTreeHint = useAppStore((s) => s.dismissTreeHint);
+  const markRecToastShown = useAppStore((s) => s.markRecToastShown);
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [showConnect, setShowConnect] = useState(false);
   const [editProfile, setEditProfile] = useState<config.Profile | null>(null); // C9: 편집 진입
@@ -48,6 +50,8 @@ function App() {
       setSettings(s as Partial<import("./store/appStore").SettingsState>);
       setLang((s.lang as "ko" | "en") || "ko");
       applyTheme(s.theme || "dark");
+      if (s.treeHintDismissed) dismissTreeHint();
+      if (s.recToastShown) markRecToastShown();
     });
     return cleanup;
   }, []);

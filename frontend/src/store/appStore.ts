@@ -26,6 +26,7 @@ interface AppState {
   // ui
   paused: boolean; searchOpen: boolean; searchQuery: string;
   diffOn: boolean; fmt: Fmt;
+  clearedAt: Record<string, number>; // topic -> ms epoch; "" = all-topics baseline (F3)
   pubTopic: string; pubHint: boolean;
   treeHintDismissed: boolean; recToastShown: boolean;
   settings: SettingsState;
@@ -47,6 +48,7 @@ interface AppState {
   setSearch: (open: boolean, query?: string) => void;
   toggleDiff: () => void;
   setFmt: (f: Fmt) => void;
+  clearMessages: (topic: string | null) => void; // F3
   setPubTopic: (t: string, hint: boolean) => void;
   dismissTreeHint: () => void;
   markRecToastShown: () => void;
@@ -62,7 +64,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tree: null, liveMessages: [], subs: [], recording: new Set<string>(),
   selectedTopic: null, selectedMsg: null, msgSource: "live",
   paused: false, searchOpen: false, searchQuery: "",
-  diffOn: false, fmt: "json",
+  diffOn: false, fmt: "json", clearedAt: {},
   pubTopic: "", pubHint: false,
   treeHintDismissed: false, recToastShown: false,
   settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200 },
@@ -99,6 +101,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ diffOn: on, ...(on ? { fmt: "json" as Fmt } : {}) }); // C33: 켜면 JSON 강제
   },
   setFmt: (f) => set({ fmt: f }),
+  // F3: clears the display only — History/QueryRecorded stay backend-owned, rows filter by clearedAt.
+  clearMessages: (topic) => {
+    const key = topic ?? "";
+    set({
+      clearedAt: { ...get().clearedAt, [key]: Date.now() },
+      selectedMsg: null,
+      ...(topic === null ? { liveMessages: [] } : {}),
+    });
+  },
   setPubTopic: (t, hint) => set({ pubTopic: t, pubHint: hint }),
   dismissTreeHint: () => set({ treeHintDismissed: true }),
   markRecToastShown: () => set({ recToastShown: true }),
@@ -107,6 +118,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       tree: null, liveMessages: [], subs: [], selectedTopic: null, selectedMsg: null,
       msgSource: "live", paused: false, searchOpen: false, searchQuery: "",
-      pubTopic: "", pubHint: false, connectError: null, attempt: 0,
+      pubTopic: "", pubHint: false, connectError: null, attempt: 0, clearedAt: {},
     }),
 }));
