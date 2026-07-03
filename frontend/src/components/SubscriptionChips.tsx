@@ -29,7 +29,13 @@ export function SubscriptionChips() {
       <button className="chip add" onClick={() => setAdding(!adding)}>{t("addSub")}</button>
       {adding && (
         <div className="add-sub-row">
-          <input className="mono" placeholder={t("addSubPh")} value={pattern} onChange={(e) => setPattern(e.target.value)} />
+          <input
+            className="mono"
+            placeholder={t("addSubPh")}
+            value={pattern}
+            onChange={(e) => setPattern(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void add(); }}
+          />
           <select value={qos} onChange={(e) => setQos(+e.target.value)}><option value={0}>q0</option><option value={1}>q1</option><option value={2}>q2</option></select>
           <button className="btn-accent sm" onClick={add}>{t("addSubBtn")}</button>
         </div>
@@ -61,7 +67,12 @@ export function TreeEmptyState() {
         {t("subAll")} <span className="mono-chip-inline">#</span>
       </button>
       <div className="tree-empty-specific">
-        <input placeholder={t("subSpecificPh")} value={pattern} onChange={(e) => setPattern(e.target.value)} />
+        <input
+          placeholder={t("subSpecificPh")}
+          value={pattern}
+          onChange={(e) => setPattern(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") void subSpecific(); }}
+        />
         <button className="btn-accent sm" onClick={subSpecific}>{t("subBtn")}</button>
       </div>
       <div className="tree-empty-foot">{t("floodHint")}</div>

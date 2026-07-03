@@ -4,6 +4,7 @@ import { config } from "../../wailsjs/go/models";
 import { useAppStore } from "../store/appStore";
 import { classifyConnectError } from "../lib/connectError";
 import { t } from "../lib/i18n";
+import { useEscape } from "../lib/useEscape";
 
 // C8: "+ 새 연결" / fresh-entry defaults — host blank, port 1883, tcp, 5.0, autoReconnect true.
 const empty = (): config.Profile => config.Profile.createFrom({
@@ -33,6 +34,15 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
 
   const reloadProfiles = () => GetProfiles().then((r) => setProfiles(r || []));
   useEffect(() => { reloadProfiles(); setConnectError(null); }, []);
+  useEscape(onClose); // C42/F28
+
+  // F28: Enter in any text input on the active tab submits (connect).
+  function onFormKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName === "INPUT") {
+      e.preventDefault();
+      void connect();
+    }
+  }
 
   // B47: any direct field edit deselects the saved-profile chip.
   const upd = <K extends keyof config.Profile>(k: K, v: config.Profile[K]) => {
@@ -76,7 +86,7 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal conn-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal conn-modal" onClick={(e) => e.stopPropagation()} onKeyDown={onFormKeyDown}>
         <h3>{t("connModalTitle")}</h3>
         <p className="modal-sub">{t("connModalSub")}</p>
 

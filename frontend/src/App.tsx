@@ -5,6 +5,7 @@ import { Connect, GetProfiles, GetSettings, RecordedTopics } from "../wailsjs/go
 import { config } from "../wailsjs/go/models";
 import { setLang, t } from "./lib/i18n";
 import { applyTheme } from "./lib/theme";
+import { useEscape } from "./lib/useEscape";
 import { Welcome } from "./components/Welcome";
 import { ConnectionHome } from "./components/ConnectionHome";
 import { ConnectionBar } from "./components/ConnectionBar";
@@ -60,6 +61,9 @@ function App() {
     mq.addEventListener("change", fn);
     return () => mq.removeEventListener("change", fn);
   }, [settings.theme]);
+
+  // F6/C42/F28: Esc closes the "?" guide overlay (only meaningful while it's open).
+  useEscape(() => { if (showGuide) setShowGuide(false); });
 
   const connected = status === "connected" || status === "reconnecting";
   const inApp = connected || (status === "disconnected" && useAppStore.getState().tree !== null && useAppStore.getState().broker !== "");

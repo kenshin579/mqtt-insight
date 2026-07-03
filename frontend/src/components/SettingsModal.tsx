@@ -4,6 +4,7 @@ import { useAppStore, type SettingsState, type Fmt } from "../store/appStore";
 import { setLang, t, type Lang } from "../lib/i18n";
 import { applyTheme } from "../lib/theme";
 import { SegmentedControl } from "./SegmentedControl";
+import { useEscape } from "../lib/useEscape";
 
 // A5/B53-B57: settings modal — every field applies immediately (C38).
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -12,6 +13,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const setFmt = useAppStore((s) => s.setFmt);
   const treeHintDismissed = useAppStore((s) => s.treeHintDismissed);
   const recToastShown = useAppStore((s) => s.recToastShown);
+
+  useEscape(onClose); // C42/F28
 
   // Applies a settings patch: store + persisted backend Settings (C38) + side effects.
   function patch(next: Partial<SettingsState>) {
