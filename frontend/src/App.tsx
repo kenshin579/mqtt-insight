@@ -4,6 +4,7 @@ import { useAppStore } from "./store/appStore";
 import { Connect, GetProfiles, GetSettings, RecordedTopics } from "../wailsjs/go/main/App";
 import { config } from "../wailsjs/go/models";
 import { setLang, t } from "./lib/i18n";
+import { applyTheme } from "./lib/theme";
 import { Welcome } from "./components/Welcome";
 import { ConnectionHome } from "./components/ConnectionHome";
 import { ConnectionBar } from "./components/ConnectionBar";
@@ -16,13 +17,6 @@ import { MessageList } from "./components/MessageList";
 import { PublishPanel } from "./components/PublishPanel";
 import "./lib/tokens.css";
 import "./App.css";
-
-export function applyTheme(theme: string) {
-  const resolved = theme === "system"
-    ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
-    : theme;
-  document.documentElement.dataset.theme = resolved;
-}
 
 function App() {
   const status = useAppStore((s) => s.status);

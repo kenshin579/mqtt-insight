@@ -175,6 +175,35 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .btn-connect { flex: 1; background: var(--accent); color: #fff; border: 0; padding: 11px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-connect:disabled { opacity: .6; cursor: default; }
 
+/* === SettingsModal (A5, B53-B57) === */
+.settings-modal { width: 480px; max-width: 92vw; max-height: 90vh; overflow: auto; background: var(--modal);
+  border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.5); padding: 0; display: block; }
+.settings-header { display: flex; align-items: center; gap: 9px; padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--modal); z-index: 1; }
+.settings-gear { font-size: 16px; }
+.settings-header h3 { flex: 1; margin: 0; font-size: 17px; font-weight: 700; }
+.settings-close { background: none; border: 1px solid var(--btnborder); color: var(--dim); width: 26px; height: 26px;
+  border-radius: 7px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+
+.settings-body { padding: 6px 20px 20px; }
+.settings-body .sec-header { font-size: 10.5px; font-weight: 700; letter-spacing: .6px; color: var(--dim3);
+  text-transform: uppercase; margin: 22px 0 10px; }
+.settings-body .sec-header:first-child { margin-top: 16px; }
+.setting-field { margin-bottom: 16px; }
+.setting-field.tight { margin-bottom: 4px; }
+.setting-field-title { font-size: 12.5px; font-weight: 500; margin-bottom: 7px; }
+.setting-field-title.with-hint { margin-bottom: 2px; }
+.setting-hint { font-size: 11px; color: var(--dim); margin-bottom: 7px; }
+.settings-body .seg { display: flex; width: 100%; gap: 4px; }
+.settings-body .seg button { flex: 1; font-size: 12px; font-weight: 600; padding: 8px 6px; border-radius: 7px; }
+
+.setting-buffer-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2px; }
+.setting-value { font-size: 12px; font-weight: 600; color: #6ba0ff; }
+.buffer-slider { width: 100%; accent-color: var(--accent); }
+
+.settings-footer { padding: 14px 20px 18px; border-top: 1px solid var(--line); }
+.settings-footer .btn-accent.full { width: 100%; padding: 11px; border-radius: 9px; font-size: 13px; }
+
 /* === SubscriptionChips + TreeEmptyState (B20-B23, B27) === */
 .sub-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 11px; }
 .sub-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--dim3); margin-right: 2px; }
