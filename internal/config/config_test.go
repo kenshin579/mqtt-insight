@@ -70,3 +70,13 @@ func TestSettingsDefaultsForNewFields(t *testing.T) {
 		t.Fatalf("defaults wrong: %+v", s)
 	}
 }
+
+func TestHasHostPort(t *testing.T) {
+	c := &Config{Profiles: []Profile{{Name: "a", Host: "h", Port: 1883}}}
+	if !c.HasHostPort("h", 1883) {
+		t.Fatal("expected true for existing host:port")
+	}
+	if c.HasHostPort("h", 8883) {
+		t.Fatal("expected false for different port")
+	}
+}

@@ -87,7 +87,7 @@ function App() {
         <span className="app-name">MQTT Insight</span>
         <span className="spacer" />
         <button className="tb-btn" title={t("tourTitle")} onClick={() => setShowGuide(true)}>?</button>
-        <button className="tb-btn" title={t("setTitle")} onClick={() => setShowSettings(true)}>⚙</button>
+        <button className="tb-btn gear" title={t("setTitle")} onClick={() => setShowSettings(true)}>⚙</button>
       </div>
       <ConnectionBar onOpenConnect={() => openConnect()} />
       <ReconnectBanner onReconnect={() => lastProfile && reconnectWith(lastProfile)} />

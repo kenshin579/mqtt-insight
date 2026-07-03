@@ -1,10 +1,10 @@
 * { box-sizing: border-box; }
-body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; font-size: 13px; }
+body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(--text); font-family: var(--font-ui); font-size: 13px; }
 .layout { display: flex; flex-direction: column; height: 100vh; }
 /* === Titlebar (A11, B1, B2) === */
 .titlebar { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 14px; background: var(--titlebar); border-bottom: 1px solid var(--border); flex: none; }
 .tl-dots { display: flex; gap: 7px; }
-.tl-dots i { width: 10px; height: 10px; border-radius: 50%; font-style: normal; }
+.tl-dots i { width: 12px; height: 12px; border-radius: 50%; font-style: normal; }
 .tl-dots i:nth-child(1) { background: #ff5f57; }
 .tl-dots i:nth-child(2) { background: #febc2e; }
 .tl-dots i:nth-child(3) { background: #28c840; }
@@ -13,6 +13,7 @@ body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(
 .titlebar .app-name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
 .tb-btn { background: none; border: 1px solid var(--btnborder); color: var(--dim); width: 24px; height: 24px; border-radius: 6px;
   cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.tb-btn.gear { font-size: 14px; }
 
 /* === Connection bar (A11, B3-B7, E9) === */
 .conn-bar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; background: var(--pane); border-bottom: 1px solid var(--border); flex: none; }
@@ -21,9 +22,9 @@ body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(
 .conn-bar .dot.connecting, .conn-bar .dot.reconnecting { background: var(--warn); box-shadow: 0 0 0 3px rgba(254,188,46,.18); }
 .conn-bar .status-label { font-size: 12.5px; font-weight: 600; }
 .conn-bar .broker { font-size: 12px; color: var(--dim); }
-.panes { display: flex; flex: 1; min-height: 0; }
+.panes { display: flex; flex: 1; min-height: 0; animation: fadeIn .25s ease; }
 .pane { background: var(--pane); overflow: auto; }
-.tree-pane { flex: 0 0 320px; border-right: 1px solid var(--border); }
+.tree-pane { flex: 0 0 316px; border-right: 1px solid var(--border); }
 .right-col { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .msg-pane { flex: 1; border-bottom: 1px solid var(--border); min-height: 0; }
 /* .publish-panel (owned by PublishPanel.tsx) is the real flex item that sizes 176<->316px;
@@ -50,13 +51,14 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 /* === SegmentedControl (B55 wrapper reused for tabs/toggles) === */
 .seg { display: inline-flex; align-items: center; background: var(--input); border-radius: 9px; padding: 3px; gap: 2px; }
 .seg button { background: none; color: var(--dim); border: 0; border-radius: 7px; padding: 3px 9px; font-size: 10.5px; font-weight: 600; cursor: pointer; }
-.seg-sm button { padding: 3px 8px; font-size: 10px; }
+.seg-sm button { padding: 3px 9px; font-size: 10.5px; border-radius: 5px; }
 .seg button.on { background: var(--accent); color: #fff; }
 
 /* === Toast (B59, A7) === */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 300; max-width: 430px;
   background: var(--modal); border-radius: 11px; padding: 12px 16px; font-size: 12px; line-height: 1.55; color: var(--text2);
-  box-shadow: 0 14px 40px rgba(0,0,0,.4); display: flex; align-items: flex-start; gap: 8px; animation: fadeIn .2s ease; }
+  box-shadow: 0 14px 40px rgba(0,0,0,.4); display: flex; align-items: center; gap: 8px; animation: fadeIn .2s ease; }
+.toast-dot { color: var(--err); font-size: 11px; margin-right: 8px; }
 
 /* === ConnectingOverlay (A8, B60) === */
 .connecting-overlay { position: fixed; inset: 0; z-index: 90; background: rgba(10,10,14,.45);
@@ -96,7 +98,7 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .guide-overlay .welcome { flex: 1; }
 
 /* === ConnectionHome (A2, A14, B12-B18) === */
-.home { flex: 1; min-height: 0; display: flex; }
+.home { flex: 1; min-height: 0; display: flex; animation: fadeIn .25s ease; }
 .home-left { width: 300px; flex: 0 0 300px; background: var(--pane); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 14px 12px; gap: 8px; }
 .home-header { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--dim3); padding: 0 2px 4px; }
 .home-list { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; }

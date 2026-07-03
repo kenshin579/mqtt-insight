@@ -17,9 +17,9 @@ describe("payload", () => {
     const out = formatPayload(b64('{"a":1}'), "json");
     expect(out).toContain('"a": 1');
   });
-  it("renders hex uppercase space-separated", () => {
-    const out = formatPayload(b64("AB"), "hex");
-    expect(out).toBe("41 42");
+  it("renders hex lowercase space-separated", () => {
+    const out = formatPayload(btoa(String.fromCharCode(0xab, 0x0f)), "hex");
+    expect(out).toBe("ab 0f");
   });
   it("plain decodes base64 back to text", () => {
     expect(formatPayload(b64("hello"), "plain")).toBe("hello");

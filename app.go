@@ -84,7 +84,7 @@ func (a *App) SaveProfile(p config.Profile) error {
 			break
 		}
 	}
-	if !replaced {
+	if !replaced && !a.cfg.HasHostPort(p.Host, p.Port) {
 		a.cfg.Profiles = append(a.cfg.Profiles, p)
 	}
 	return config.Save(a.cfgPath, a.cfg)

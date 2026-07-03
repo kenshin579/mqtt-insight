@@ -70,6 +70,16 @@ func Load(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// HasHostPort reports whether any profile already uses host:port.
+func (c *Config) HasHostPort(host string, port int) bool {
+	for _, p := range c.Profiles {
+		if p.Host == host && p.Port == port {
+			return true
+		}
+	}
+	return false
+}
+
 // Save writes config to path as indented JSON.
 func Save(path string, cfg *Config) error {
 	b, err := json.MarshalIndent(cfg, "", "  ")

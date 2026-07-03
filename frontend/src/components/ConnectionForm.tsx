@@ -64,12 +64,12 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
     setConnectError(null);
     setConnecting(true);
     try {
-      await SaveProfile(finalP);
-      reloadProfiles();
       resetSession();
       setActiveVersion(finalP.version);
       setBroker(`${finalP.host}:${finalP.port}`);
       await Connect(finalP);
+      await SaveProfile(finalP);
+      reloadProfiles();
       onConnected?.(finalP);
       onSaved();
       onClose();
