@@ -13,7 +13,7 @@ export function MessageList() {
   const liveMessages = useAppStore((s) => s.liveMessages);
   const paused = useAppStore((s) => s.paused);
   const togglePaused = useAppStore((s) => s.togglePaused);
-  const clear = useAppStore((s) => s.clear);
+  const resetSession = useAppStore((s) => s.resetSession);
   const recording = useAppStore((s) => s.recording);
   const [history, setHistory] = useState<Message[]>([]);
   const [recorded, setRecorded] = useState<Message[]>([]);
@@ -71,7 +71,7 @@ export function MessageList() {
         ) : (
           <>
             <button onClick={togglePaused}>{paused ? "Resume" : "Pause"}</button>
-            <button onClick={clear}>Clear</button>
+            <button onClick={resetSession}>Clear</button>
           </>
         )}
       </div>

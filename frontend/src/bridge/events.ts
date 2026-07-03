@@ -8,7 +8,7 @@ export function initEventBridge(): () => void {
   EventsOn("mqtt:tree", (t: TreeNode) => useAppStore.getState().setTree(t));
   EventsOn("mqtt:status", (text: string) => {
     const connected = text === "connected";
-    useAppStore.getState().setStatus(connected ? "connected" : "disconnected", text);
+    useAppStore.getState().setStatus(connected ? "connected" : "disconnected");
   });
   return () => EventsOff("mqtt:messages", "mqtt:tree", "mqtt:status");
 }

@@ -15,8 +15,9 @@ interface UserProp { key: string; value: string; }
 
 export function PublishPanel() {
   const selectedTopic = useAppStore((s) => s.selectedTopic);
-  const publishTopic = useAppStore((s) => s.publishTopic);
-  const setPublishTopic = useAppStore((s) => s.setPublishTopic);
+  const pubTopic = useAppStore((s) => s.pubTopic);
+  const pubHint = useAppStore((s) => s.pubHint);
+  const setPubTopic = useAppStore((s) => s.setPubTopic);
   const [topic, setTopic] = useState("");
   const [payload, setPayload] = useState("");
   const [qos, setQos] = useState(0);
@@ -26,13 +27,13 @@ export function PublishPanel() {
   const [responseTopic, setResponseTopic] = useState("");
   const [userProps, setUserProps] = useState<UserProp[]>([]);
 
-  // "이 토픽에 발행" from the tree context menu fills the topic input.
+  // "이 토픽에 발행" from the tree context menu (or tree selection) fills the topic input.
   useEffect(() => {
-    if (publishTopic) {
-      setTopic(publishTopic);
-      setPublishTopic(null);
+    if (pubHint && pubTopic) {
+      setTopic(pubTopic);
+      setPubTopic(pubTopic, false);
     }
-  }, [publishTopic, setPublishTopic]);
+  }, [pubHint, pubTopic, setPubTopic]);
 
   async function publish() {
     const t = topic || selectedTopic || "";

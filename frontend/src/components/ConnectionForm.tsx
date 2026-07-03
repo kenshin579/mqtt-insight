@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { GetProfiles, SaveProfile, Connect } from "../../wailsjs/go/main/App";
 import { config } from "../../wailsjs/go/models";
 import { useAppStore } from "../store/appStore";
+import { classifyConnectError } from "../lib/connectError";
 
 const empty = {
   name: "", host: "localhost", port: 1883, transport: "tcp", version: "5.0",
@@ -15,7 +16,8 @@ export function ConnectionForm({ onClose }: { onClose: () => void }) {
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [p, setP] = useState<config.Profile>(config.Profile.createFrom(empty));
   const setStatus = useAppStore((s) => s.setStatus);
-  const clear = useAppStore((s) => s.clear);
+  const setConnectError = useAppStore((s) => s.setConnectError);
+  const resetSession = useAppStore((s) => s.resetSession);
 
   useEffect(() => { GetProfiles().then((r) => setProfiles(r || [])); }, []);
 
@@ -24,13 +26,14 @@ export function ConnectionForm({ onClose }: { onClose: () => void }) {
 
   async function connect() {
     await SaveProfile(p);
-    clear();
-    setStatus("connecting", "connecting…");
+    resetSession();
+    setStatus("connecting");
     try {
       await Connect(p);
       onClose();
     } catch (e) {
-      setStatus("disconnected", String(e));
+      setStatus("disconnected");
+      setConnectError(classifyConnectError(String(e)));
     }
   }
 

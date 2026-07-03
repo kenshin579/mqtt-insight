@@ -31,7 +31,7 @@ function deleteRetained(topic: string) {
 export function TopicTree() {
   const tree = useAppStore((s) => s.tree);
   const selectTopic = useAppStore((s) => s.selectTopic);
-  const setPublishTopic = useAppStore((s) => s.setPublishTopic);
+  const setPubTopic = useAppStore((s) => s.setPubTopic);
   const recording = useAppStore((s) => s.recording);
   const setRecordingTopics = useAppStore((s) => s.setRecordingTopics);
   const toggleRecordingTopic = useAppStore((s) => s.toggleRecordingTopic);
@@ -47,7 +47,7 @@ export function TopicTree() {
   function menuItems(n: ArboristNode): MenuItem[] {
     const isRec = recording.has(n.id);
     const items: MenuItem[] = [
-      { label: "이 토픽에 발행", onClick: () => setPublishTopic(n.id) },
+      { label: "이 토픽에 발행", onClick: () => setPubTopic(n.id, true) },
       { label: "Unsubscribe", onClick: () => Unsubscribe(n.id) },
     ];
     if (n.retained) {
