@@ -86,3 +86,25 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .banner { display: flex; align-items: center; gap: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; animation: fadeIn .2s ease; }
 .banner-warn { background: rgba(254,188,46,.09); border-bottom: 1px solid rgba(254,188,46,.3); color: #e0b24a; }
 .banner-err { background: rgba(229,72,77,.09); border-bottom: 1px solid rgba(229,72,77,.3); color: #e07075; }
+
+/* === Welcome (A1, B8-B11) === */
+.welcome { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 24px; animation: fadeIn .3s ease; }
+.welcome-inner { max-width: 640px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.hero-icon { width: 60px; height: 60px; border-radius: 15px; background: linear-gradient(135deg,#4f8cff,#7b5cff);
+  display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff;
+  box-shadow: 0 12px 30px rgba(79,140,255,.35); }
+.welcome h1 { font-size: 25px; font-weight: 700; letter-spacing: -.4px; margin: 4px 0 0; }
+.welcome-sub { font-size: 14px; line-height: 1.6; color: var(--dim); max-width: 470px; margin: 0; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-top: 8px; }
+.step-card { background: var(--card); border: 1px solid var(--border); border-radius: 11px; padding: 16px; text-align: left; }
+.step-num { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px;
+  background: rgba(79,140,255,.15); color: #6ba0ff; font-size: 13px; font-weight: 700; }
+.step-title { font-size: 13px; font-weight: 600; margin-top: 10px; }
+.step-desc { font-size: 11.5px; line-height: 1.5; color: var(--dim); margin-top: 4px; }
+.mono-chip { font-family: var(--font-mono); color: var(--text2); }
+.cta { background: var(--accent); color: #fff; border: 0; padding: 12px 26px; border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.guide-back { margin-top: 6px; }
+
+/* guide overlay: Welcome re-shown fullscreen over the app, below modals (F6) */
+.guide-overlay { position: fixed; inset: 0; z-index: 95; background: var(--bg); display: flex; }
+.guide-overlay .welcome { flex: 1; }
