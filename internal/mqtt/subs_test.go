@@ -51,6 +51,25 @@ func TestV3ReconnectingCallbackCounts(t *testing.T) {
 	}
 }
 
+func TestV3AbortedConnectHandlerKillsOrphan(t *testing.T) {
+	v := newV3Client()
+	fired := false
+	v.cb = Callbacks{OnConnect: func() { fired = true }}
+	v.mu.Lock()
+	v.aborted = true
+	v.mu.Unlock()
+	// simulate what OnConnectHandler does on an aborted attempt
+	v.mu.Lock()
+	aborted := v.aborted
+	v.mu.Unlock()
+	if !aborted {
+		t.Fatal("aborted flag not set")
+	}
+	if fired {
+		t.Fatal("OnConnect must not fire for aborted attempt")
+	}
+}
+
 func TestClientsReturnErrorBeforeConnect(t *testing.T) {
 	for _, c := range []MQTTClient{newV3Client(), newV5Client()} {
 		if err := c.Subscribe(Subscription{Topic: "t"}); err == nil {

@@ -158,32 +158,43 @@ func (v *v5Client) Connect(ctx context.Context, cfg ConnectionConfig, cb Callbac
 		}
 		return err
 	}
+	v.mu.Lock()
 	v.cm = cm
+	v.mu.Unlock()
 	return nil
 }
 
 func (v *v5Client) Subscribe(sub Subscription) error {
-	if v.cm == nil {
+	v.mu.Lock()
+	cm := v.cm
+	v.mu.Unlock()
+	if cm == nil {
 		return fmt.Errorf("not connected")
 	}
 	v.rememberSub(sub)
-	_, err := v.cm.Subscribe(v.ctx, &paho.Subscribe{
+	_, err := cm.Subscribe(v.ctx, &paho.Subscribe{
 		Subscriptions: []paho.SubscribeOptions{{Topic: sub.Topic, QoS: sub.QoS}},
 	})
 	return err
 }
 
 func (v *v5Client) Unsubscribe(topic string) error {
-	if v.cm == nil {
+	v.mu.Lock()
+	cm := v.cm
+	v.mu.Unlock()
+	if cm == nil {
 		return fmt.Errorf("not connected")
 	}
 	v.forgetSub(topic)
-	_, err := v.cm.Unsubscribe(v.ctx, &paho.Unsubscribe{Topics: []string{topic}})
+	_, err := cm.Unsubscribe(v.ctx, &paho.Unsubscribe{Topics: []string{topic}})
 	return err
 }
 
 func (v *v5Client) Publish(m Message) error {
-	if v.cm == nil {
+	v.mu.Lock()
+	cm := v.cm
+	v.mu.Unlock()
+	if cm == nil {
 		return fmt.Errorf("not connected")
 	}
 	pub := &paho.Publish{Topic: m.Topic, QoS: m.QoS, Retain: m.Retained, Payload: m.Payload}
@@ -194,13 +205,16 @@ func (v *v5Client) Publish(m Message) error {
 		}
 		pub.Properties = props
 	}
-	_, err := v.cm.Publish(v.ctx, pub)
+	_, err := cm.Publish(v.ctx, pub)
 	return err
 }
 
 func (v *v5Client) Disconnect() error {
-	if v.cm != nil {
-		return v.cm.Disconnect(context.Background())
+	v.mu.Lock()
+	cm := v.cm
+	v.mu.Unlock()
+	if cm != nil {
+		return cm.Disconnect(context.Background())
 	}
 	return nil
 }

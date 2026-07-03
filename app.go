@@ -24,6 +24,7 @@ type App struct {
 	batcher    *app.Batcher
 	recorder   *store.SQLiteRecorder
 	connCancel context.CancelFunc
+	connState  string // last emitted status state (protected by mu)
 }
 
 // NewApp creates the app, loading persisted config.
@@ -112,18 +113,22 @@ func (a *App) SaveSettings(s config.Settings) error {
 // Connect opens a connection using a profile.
 func (a *App) Connect(p config.Profile) error {
 	a.mu.Lock()
-	if a.connCancel != nil {
-		a.connCancel() // tear down any previous connection lifetime ctx
-	}
-	if a.client != nil {
-		_ = a.client.Disconnect()
-	}
-	a.store.Clear()
+	oldCancel := a.connCancel
+	oldClient := a.client
 	client := mqtt.New(p.Version)
 	a.client = client
 	ctx, cancel := context.WithCancel(a.ctx)
 	a.connCancel = cancel
 	a.mu.Unlock()
+
+	// Tear down any previous connection outside the lock (Disconnect can block).
+	if oldCancel != nil {
+		oldCancel()
+	}
+	if oldClient != nil {
+		_ = oldClient.Disconnect()
+	}
+	a.store.Clear()
 
 	a.emitStatus("connecting", 0, "")
 	cfg := mqtt.ConnectionConfig{
@@ -146,17 +151,24 @@ func (a *App) Connect(p config.Profile) error {
 	return err
 }
 
-// emitStatus sends a structured status event to the frontend.
+// emitStatus sends a structured status event to the frontend and records the
+// current state. Must not be called while holding a.mu.
 func (a *App) emitStatus(state string, attempt int, reason string) {
+	a.mu.Lock()
+	a.connState = state
+	a.mu.Unlock()
 	runtime.EventsEmit(a.ctx, "mqtt:status", map[string]any{
 		"state": state, "attempt": attempt, "reason": reason,
 	})
 }
 
-// CancelConnect aborts an in-flight connection attempt (or tears down the
-// current connection lifetime context).
+// CancelConnect aborts an in-flight connection attempt. No-op unless connecting.
 func (a *App) CancelConnect() {
 	a.mu.Lock()
+	if a.connState != "connecting" {
+		a.mu.Unlock()
+		return
+	}
 	cancel := a.connCancel
 	a.mu.Unlock()
 	if cancel != nil {

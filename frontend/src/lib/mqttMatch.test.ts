@@ -16,6 +16,11 @@ describe("mqttMatch", () => {
     expect(topicMatches("home/kitchen/temp", "home/+/temp")).toBe(true);
     expect(topicMatches("home/a/b/temp", "home/+/temp")).toBe(false);
   });
+  it("+ does not match missing or extra levels", () => {
+    expect(topicMatches("a", "a/+")).toBe(false);
+    expect(topicMatches("a/", "a/+")).toBe(true); // trailing empty segment is a level
+    expect(topicMatches("a/b", "+")).toBe(false);
+  });
   it("matchesAny over sub list", () => {
     expect(matchesAny("s/1/t", [{ pattern: "x/#", qos: 0 }, { pattern: "s/+/t", qos: 1 }])).toBe(true);
     expect(matchesAny("s/1/t", [])).toBe(false);
