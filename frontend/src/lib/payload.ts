@@ -43,8 +43,7 @@ export function formatPayload(b64: string, fmt: Format): string {
     case "hex":
       return Array.from(base64ToBytes(b64))
         .map((b) => b.toString(16).padStart(2, "0"))
-        .join(" ")
-        .toUpperCase();
+        .join(" ");
     case "base64":
       return b64;
     case "plain":

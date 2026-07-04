@@ -40,3 +40,43 @@ func TestLoadMissingReturnsDefaults(t *testing.T) {
 		t.Fatal("expected default ring buffer size")
 	}
 }
+
+func TestSettingsNewFieldsRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	in := &Config{Settings: Settings{
+		Theme: "system", RingBufferSize: 300, DefaultFormat: "json",
+		Lang: "en", TimestampFormat: "relative", MessageOrder: "oldest",
+		TreeHintDismissed: true, RecToastShown: true,
+	}}
+	if err := Save(path, in); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	out, err := Load(path)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	s := out.Settings
+	if s.Lang != "en" || s.TimestampFormat != "relative" || s.MessageOrder != "oldest" ||
+		!s.TreeHintDismissed || !s.RecToastShown {
+		t.Fatalf("new fields not round-tripped: %+v", s)
+	}
+}
+
+func TestSettingsDefaultsForNewFields(t *testing.T) {
+	out, _ := Load(filepath.Join(t.TempDir(), "nope.json"))
+	s := out.Settings
+	if s.Lang != "ko" || s.TimestampFormat != "absolute" || s.MessageOrder != "newest" {
+		t.Fatalf("defaults wrong: %+v", s)
+	}
+}
+
+func TestHasHostPort(t *testing.T) {
+	c := &Config{Profiles: []Profile{{Name: "a", Host: "h", Port: 1883}}}
+	if !c.HasHostPort("h", 1883) {
+		t.Fatal("expected true for existing host:port")
+	}
+	if c.HasHostPort("h", 8883) {
+		t.Fatal("expected false for different port")
+	}
+}

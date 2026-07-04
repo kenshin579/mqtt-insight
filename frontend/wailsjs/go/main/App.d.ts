@@ -3,6 +3,8 @@
 import {config} from '../models';
 import {mqtt} from '../models';
 
+export function CancelConnect():Promise<void>;
+
 export function Connect(arg1:config.Profile):Promise<void>;
 
 export function DeleteProfile(arg1:string):Promise<void>;

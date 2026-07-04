@@ -20,4 +20,5 @@ export interface TreeNode {
   retained: boolean;
 }
 
-export type Status = "disconnected" | "connecting" | "connected";
+export type Status = "disconnected" | "connecting" | "connected" | "reconnecting";
+export interface StatusEvent { state: Status; attempt: number; reason: string }

@@ -52,6 +52,11 @@ export namespace config {
 	    theme: string;
 	    ringBufferSize: number;
 	    defaultFormat: string;
+	    lang: string;
+	    timestampFormat: string;
+	    messageOrder: string;
+	    treeHintDismissed: boolean;
+	    recToastShown: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -62,6 +67,11 @@ export namespace config {
 	        this.theme = source["theme"];
 	        this.ringBufferSize = source["ringBufferSize"];
 	        this.defaultFormat = source["defaultFormat"];
+	        this.lang = source["lang"];
+	        this.timestampFormat = source["timestampFormat"];
+	        this.messageOrder = source["messageOrder"];
+	        this.treeHintDismissed = source["treeHintDismissed"];
+	        this.recToastShown = source["recToastShown"];
 	    }
 	}
 

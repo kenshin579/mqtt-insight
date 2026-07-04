@@ -8,6 +8,7 @@ type MessageStore interface {
 	History(topic string) []mqtt.Message
 	TreeSnapshot() *Node
 	Clear()
+	SetCapacity(n int)
 }
 
 // MemoryStore is the v1 in-memory implementation: tree + ring buffer.
@@ -33,3 +34,6 @@ func (s *MemoryStore) Clear() {
 	s.tree.Clear()
 	s.ring.Clear()
 }
+
+// SetCapacity changes the per-topic ring buffer cap immediately.
+func (s *MemoryStore) SetCapacity(n int) { s.ring.SetCapacity(n) }

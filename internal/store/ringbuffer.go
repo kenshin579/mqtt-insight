@@ -46,6 +46,21 @@ func (r *RingBuffer) Get(topic string) []mqtt.Message {
 	return out
 }
 
+// SetCapacity changes the per-topic cap immediately, trimming existing buffers.
+func (r *RingBuffer) SetCapacity(capacity int) {
+	if capacity < 1 {
+		capacity = 1
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.capacity = capacity
+	for topic, buf := range r.byTopic {
+		if len(buf) > capacity {
+			r.byTopic[topic] = buf[len(buf)-capacity:]
+		}
+	}
+}
+
 // Clear removes all buffered messages.
 func (r *RingBuffer) Clear() {
 	r.mu.Lock()

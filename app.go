@@ -15,14 +15,16 @@ import (
 
 // App is the Wails-bound application.
 type App struct {
-	ctx      context.Context
-	cfg      *config.Config
-	cfgPath  string
-	mu       sync.Mutex
-	client   mqtt.MQTTClient
-	store    store.MessageStore
-	batcher  *app.Batcher
-	recorder *store.SQLiteRecorder
+	ctx        context.Context
+	cfg        *config.Config
+	cfgPath    string
+	mu         sync.Mutex
+	client     mqtt.MQTTClient
+	store      store.MessageStore
+	batcher    *app.Batcher
+	recorder   *store.SQLiteRecorder
+	connCancel context.CancelFunc
+	connState  string // last emitted status state (protected by mu)
 }
 
 // NewApp creates the app, loading persisted config.
@@ -82,7 +84,7 @@ func (a *App) SaveProfile(p config.Profile) error {
 			break
 		}
 	}
-	if !replaced {
+	if !replaced && !a.cfg.HasHostPort(p.Host, p.Port) {
 		a.cfg.Profiles = append(a.cfg.Profiles, p)
 	}
 	return config.Save(a.cfgPath, a.cfg)
@@ -99,22 +101,36 @@ func (a *App) DeleteProfile(name string) error {
 	return config.Save(a.cfgPath, a.cfg)
 }
 
-// SaveSettings persists settings.
+// SaveSettings persists settings and applies changes that affect live state.
 func (a *App) SaveSettings(s config.Settings) error {
 	a.cfg.Settings = s
+	if a.store != nil {
+		a.store.SetCapacity(s.RingBufferSize)
+	}
 	return config.Save(a.cfgPath, a.cfg)
 }
 
 // Connect opens a connection using a profile.
 func (a *App) Connect(p config.Profile) error {
 	a.mu.Lock()
-	if a.client != nil {
-		_ = a.client.Disconnect()
-	}
-	a.store.Clear()
+	oldCancel := a.connCancel
+	oldClient := a.client
 	client := mqtt.New(p.Version)
 	a.client = client
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.connCancel = cancel
 	a.mu.Unlock()
+
+	// Tear down any previous connection outside the lock (Disconnect can block).
+	if oldCancel != nil {
+		oldCancel()
+	}
+	if oldClient != nil {
+		_ = oldClient.Disconnect()
+	}
+	a.store.Clear()
+
+	a.emitStatus("connecting", 0, "")
 	cfg := mqtt.ConnectionConfig{
 		Host: p.Host, Port: p.Port, Transport: p.Transport, Version: p.Version,
 		ClientID: p.ClientID, Username: p.Username, Password: p.Password,
@@ -123,18 +139,53 @@ func (a *App) Connect(p config.Profile) error {
 		WSPath: p.WSPath, WillTopic: p.WillTopic, WillPayload: p.WillPayload,
 		WillQoS: p.WillQoS, WillRetained: p.WillRetained,
 	}
-	return client.Connect(a.ctx, cfg, mqtt.Callbacks{
+	err := client.Connect(ctx, cfg, mqtt.Callbacks{
 		OnMessage:        func(m mqtt.Message) { a.batcher.Add(m) },
-		OnConnect:        func() { runtime.EventsEmit(a.ctx, "mqtt:status", "connected") },
-		OnConnectionLost: func(err error) { runtime.EventsEmit(a.ctx, "mqtt:status", "disconnected: "+err.Error()) },
+		OnConnect:        func() { a.emitStatus("connected", 0, "") },
+		OnConnectionLost: func(err error) { a.emitStatus("disconnected", 0, err.Error()) },
+		OnReconnecting:   func(attempt int) { a.emitStatus("reconnecting", attempt, "") },
 	})
+	if err != nil {
+		a.emitStatus("disconnected", 0, err.Error())
+	}
+	return err
+}
+
+// emitStatus sends a structured status event to the frontend and records the
+// current state. Must not be called while holding a.mu.
+func (a *App) emitStatus(state string, attempt int, reason string) {
+	a.mu.Lock()
+	a.connState = state
+	a.mu.Unlock()
+	runtime.EventsEmit(a.ctx, "mqtt:status", map[string]any{
+		"state": state, "attempt": attempt, "reason": reason,
+	})
+}
+
+// CancelConnect aborts an in-flight connection attempt. No-op unless connecting.
+func (a *App) CancelConnect() {
+	a.mu.Lock()
+	if a.connState != "connecting" {
+		a.mu.Unlock()
+		return
+	}
+	cancel := a.connCancel
+	a.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	a.emitStatus("disconnected", 0, "")
 }
 
 // Disconnect closes the active connection.
 func (a *App) Disconnect() error {
 	a.mu.Lock()
 	c := a.client
+	cancel := a.connCancel
 	a.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 	if c == nil {
 		return nil
 	}

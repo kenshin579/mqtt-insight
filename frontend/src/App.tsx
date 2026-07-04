@@ -1,36 +1,118 @@
 import { useEffect, useState } from "react";
 import { initEventBridge } from "./bridge/events";
+import { useAppStore } from "./store/appStore";
+import { Connect, GetProfiles, GetSettings, RecordedTopics } from "../wailsjs/go/main/App";
+import { config } from "../wailsjs/go/models";
+import { setLang, t } from "./lib/i18n";
+import { applyTheme } from "./lib/theme";
+import { useEscape } from "./lib/useEscape";
+import { Welcome } from "./components/Welcome";
+import { ConnectionHome } from "./components/ConnectionHome";
 import { ConnectionBar } from "./components/ConnectionBar";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { SettingsModal } from "./components/SettingsModal";
+import { ConnectingOverlay } from "./components/ConnectingOverlay";
+import { ReconnectBanner } from "./components/ReconnectBanner";
 import { TopicTree } from "./components/TopicTree";
 import { MessageList } from "./components/MessageList";
 import { PublishPanel } from "./components/PublishPanel";
-import { GetSettings } from "../wailsjs/go/main/App";
+import "./lib/tokens.css";
 import "./App.css";
 
 function App() {
+  const status = useAppStore((s) => s.status);
+  const settings = useAppStore((s) => s.settings);
+  const setSettings = useAppStore((s) => s.setSettings);
+  const setRecordingTopics = useAppStore((s) => s.setRecordingTopics);
+  const setActiveVersion = useAppStore((s) => s.setActiveVersion);
+  const setBroker = useAppStore((s) => s.setBroker);
+  const dismissTreeHint = useAppStore((s) => s.dismissTreeHint);
+  const markRecToastShown = useAppStore((s) => s.markRecToastShown);
+  const setFmt = useAppStore((s) => s.setFmt);
+  const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [showConnect, setShowConnect] = useState(false);
+  const [editProfile, setEditProfile] = useState<config.Profile | null>(null); // C9: 편집 진입
   const [showSettings, setShowSettings] = useState(false);
-  useEffect(() => initEventBridge(), []);
+  const [showGuide, setShowGuide] = useState(false); // F6
+  const [lastProfile, setLastProfile] = useState<config.Profile | null>(null); // C18: 재연결용 최근 프로필
+
+  const reloadProfiles = () => GetProfiles().then((p) => setProfiles(p || []));
+
   useEffect(() => {
-    GetSettings().then((s) => { document.documentElement.dataset.theme = s.theme; });
+    const cleanup = initEventBridge();
+    reloadProfiles();
+    RecordedTopics().then((ts) => setRecordingTopics(ts || []));
+    GetSettings().then((s) => {
+      setSettings(s as Partial<import("./store/appStore").SettingsState>);
+      setLang((s.lang as "ko" | "en") || "ko");
+      applyTheme(s.theme || "dark");
+      if (s.treeHintDismissed) dismissTreeHint();
+      if (s.recToastShown) markRecToastShown();
+      setFmt((s.defaultFormat as import("./store/appStore").Fmt) || "plain"); // G5: initial fmt = settings default
+    });
+    return cleanup;
   }, []);
+
+  // system theme live listener (C38)
+  useEffect(() => {
+    if (settings.theme !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const fn = () => applyTheme("system");
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, [settings.theme]);
+
+  // F6/C42/F28: Esc closes the "?" guide overlay (only meaningful while it's open).
+  useEscape(() => { if (showGuide) setShowGuide(false); });
+
+  const connected = status === "connected" || status === "reconnecting";
+  const inApp = connected || (status === "disconnected" && useAppStore.getState().tree !== null && useAppStore.getState().broker !== "");
+  // view 파생: 연결됨(또는 앱 진입 후 끊김) → app / 미연결 && 프로필>0 → home / 그 외 welcome
+  const view = inApp ? "app" : profiles.length > 0 ? "home" : "welcome";
+
+  const openConnect = (edit?: config.Profile) => { setEditProfile(edit ?? null); setShowConnect(true); };
+
+  // C18: 재연결 = 데이터 보존(resetSession 없이) 즉시 Connect.
+  const reconnectWith = (p: config.Profile) => {
+    setActiveVersion(p.version);
+    setBroker(`${p.host}:${p.port}`);
+    Connect(p);
+  };
 
   return (
     <div className="layout">
-      <ConnectionBar onOpenConnect={() => setShowConnect(true)} onOpenSettings={() => setShowSettings(true)} />
-      <div className="panes">
-        <div className="pane tree-pane"><TopicTree /></div>
-        <div className="right-col">
-          <div className="pane msg-pane"><MessageList /></div>
-          <div className="pane pub-pane"><PublishPanel /></div>
-        </div>
+      <div className="titlebar">{/* A11: 점 3개·아이콘·앱명·spacer·?·⚙ — CSS는 레지스트리 A11/B1/B2 */}
+        <span className="tl-dots"><i /><i /><i /></span>
+        <span className="app-icon">◈</span>
+        <span className="app-name">MQTT Insight</span>
+        <span className="spacer" />
+        <button className="tb-btn" title={t("tourTitle")} onClick={() => setShowGuide(true)}>?</button>
+        <button className="tb-btn gear" title={t("setTitle")} onClick={() => setShowSettings(true)}>⚙</button>
       </div>
-      {showConnect && <ConnectionForm onClose={() => setShowConnect(false)} />}
+      <ConnectionBar onOpenConnect={() => openConnect()} />
+      <ReconnectBanner onReconnect={() => lastProfile && reconnectWith(lastProfile)} />
+      {view === "welcome" && <Welcome onConnect={() => openConnect()} />}
+      {view === "home" && (
+        <ConnectionHome profiles={profiles} onNew={() => openConnect()} onEdit={(p) => openConnect(p)} onProfilesChanged={reloadProfiles} onConnected={setLastProfile} />
+      )}
+      {view === "app" && (
+        <div className="panes">
+          <div className="pane tree-pane"><TopicTree /></div>
+          <div className="right-col">
+            <div className="pane msg-pane"><MessageList /></div>
+            <div className="pane pub-pane"><PublishPanel /></div>
+          </div>
+        </div>
+      )}
+      {showGuide && view !== "welcome" && (
+        <div className="guide-overlay"><Welcome onConnect={() => { setShowGuide(false); openConnect(); }} onClose={() => setShowGuide(false)} /></div>
+      )}
+      {showConnect && (
+        <ConnectionForm editProfile={editProfile} onClose={() => setShowConnect(false)} onSaved={reloadProfiles} onConnected={setLastProfile} />
+      )}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {status === "connecting" && <ConnectingOverlay />}
     </div>
   );
 }
-
 export default App;
