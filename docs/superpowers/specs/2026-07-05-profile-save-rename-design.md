@@ -30,7 +30,7 @@
 - 새 상태 `originName: string` 추가.
   - `pickChip(sp)` → `sp.name`, `editProfile` 진입 → `editProfile.name`, `newChip()` → `""`.
   - 필드 수정으로 칩의 시각적 선택(`selectedChip`)이 풀려도(B47) `originName`은 유지한다. "무엇을 편집 중인가"는 시각 상태와 별개.
-- 자동 이름: `finalP.name = p.name.trim() || `${p.host}:${p.port}``.
+- 자동 이름: `p.name.trim()`이 비어 있으면 `${p.host}:${p.port}` 템플릿으로 채운다.
 - `connect()` 순서 변경:
   1. `SaveProfile(finalP, originName)` — 실패 시 오류 배너 표시 후 중단(연결 시도 안 함).
   2. 저장 성공 시 `reloadProfiles()` + `originName = finalP.name` 갱신 (연결 실패 후 재시도가 stale prevName을 넘기지 않도록).
@@ -48,7 +48,7 @@ func (c *Config) UpsertProfile(p Profile, prevName string)
 로직:
 
 1. `prevName != ""`이고 그 이름의 프로필이 존재 → 그 자리를 `p`로 교체 (rename 포함). `p.Name`이 **다른** 기존 프로필과 겹치면 그 프로필은 제거한다 ("그 이름으로 저장"의 의미상 덮어쓰기).
-2. `prevName`이 비었거나 못 찾음 → 이름 기준 upsert. 이름이 없어서 새로 append하는 경우, `p.Name`이 자동 명명 형식(`fmt.Sprintf("%s:%d", p.Host, p.Port)`)과 일치하고 이미 같은 host:port 프로필이 있으면 append를 건너뛴다.
+2. `prevName`이 비었거나 못 찾음 → 이름 기준 upsert. 해당 이름의 프로필이 없어 새로 append하는 경우, `p.Name`이 자동 명명 형식(`fmt.Sprintf("%s:%d", p.Host, p.Port)`)과 일치하고 이미 같은 host:port 프로필이 있으면 append를 건너뛴다.
    - "못 찾음 → upsert 폴백" 덕분에 저장 성공 → 연결 실패 → 재시도 시에도 멱등하다.
 
 `app.go`:
@@ -60,7 +60,7 @@ func (a *App) SaveProfile(p config.Profile, prevName string) error {
 }
 ```
 
-`HasHostPort`는 `UpsertProfile` 내부에서만 쓰이게 되면 비공개로 내리거나 유지 (구현 시 판단).
+`HasHostPort`는 기존 테스트가 있으므로 공개 메서드로 유지하고 `UpsertProfile` 내부에서 재사용한다.
 
 Wails 바인딩 시그니처 변경 → `frontend/wailsjs/`는 `wails dev`/`wails build`가 재생성 (직접 수정 금지).
 
