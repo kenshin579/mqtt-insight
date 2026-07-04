@@ -1,4 +1,5 @@
-import { SaveSettings } from "../../wailsjs/go/main/App";
+import { useEffect, useState } from "react";
+import { SaveSettings, GetVersion } from "../../wailsjs/go/main/App";
 import { config } from "../../wailsjs/go/models";
 import { useAppStore, type SettingsState, type Fmt } from "../store/appStore";
 import { setLang, t, type Lang } from "../lib/i18n";
@@ -13,8 +14,11 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const setFmt = useAppStore((s) => s.setFmt);
   const treeHintDismissed = useAppStore((s) => s.treeHintDismissed);
   const recToastShown = useAppStore((s) => s.recToastShown);
+  const [version, setVersion] = useState("");
 
   useEscape(onClose); // C42/F28
+
+  useEffect(() => { GetVersion().then(setVersion); }, []);
 
   // Applies a settings patch: store + persisted backend Settings (C38) + side effects.
   function patch(next: Partial<SettingsState>) {
@@ -131,6 +135,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="settings-footer">
+          <div className="settings-version">mqtt-insight {version}</div>
           <button className="btn-accent full" onClick={onClose}>{t("setDone")}</button>
         </div>
       </div>

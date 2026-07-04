@@ -2,6 +2,20 @@
 
 An open-source MQTT desktop client for IoT/embedded debugging, built with Wails + Go + React.
 
+## Install
+
+Download the latest build from [Releases](https://github.com/kenshin579/mqtt-insight/releases).
+
+**macOS** (universal — Apple Silicon & Intel): unzip, move `mqtt-insight.app` to Applications.
+The app is not code-signed yet — on first launch use right-click → Open, or run:
+
+```bash
+xattr -cr /Applications/mqtt-insight.app
+```
+
+**Windows**: run the installer (`…-installer.exe`), or use the portable zip.
+If SmartScreen warns, choose "More info" → "Run anyway".
+
 ## Features
 
 - Connection profiles over TCP / TLS / WebSocket, supporting MQTT 3.1.1 and 5.0

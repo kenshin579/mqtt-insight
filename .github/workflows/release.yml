@@ -1,0 +1,79 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+      - name: Build (universal)
+        run: wails build -platform darwin/universal -ldflags "-X main.version=${GITHUB_REF_NAME}"
+      # --- macOS 서명/노타라이즈 (Apple Developer 계정 확보 시 활성화) ---
+      # - name: Import signing cert
+      #   env: { MACOS_CERT_P12: ..., MACOS_CERT_PASSWORD: ... }
+      #   run: <security import + codesign --deep --options runtime>
+      # - name: Notarize
+      #   run: <xcrun notarytool submit --wait + stapler>
+      - name: Zip app bundle
+        run: ditto -c -k --keepParent build/bin/mqtt-insight.app "mqtt-insight-${GITHUB_REF_NAME}-macos-universal.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: mqtt-insight-*-macos-universal.zip
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
+      - name: Build (amd64 + NSIS)
+        shell: bash
+        run: wails build -platform windows/amd64 -nsis -ldflags "-X main.version=${GITHUB_REF_NAME}"
+      - name: Package artifacts
+        shell: bash
+        run: |
+          mv "build/bin/mqtt-insight-amd64-installer.exe" "mqtt-insight-${GITHUB_REF_NAME}-windows-amd64-installer.exe"
+          7z a "mqtt-insight-${GITHUB_REF_NAME}-windows-amd64-portable.zip" ./build/bin/mqtt-insight.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            mqtt-insight-*-installer.exe
+            mqtt-insight-*-portable.zip
+
+  release:
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "mqtt-insight ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            mqtt-insight-*.zip mqtt-insight-*.exe

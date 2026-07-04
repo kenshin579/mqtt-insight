@@ -34,6 +34,10 @@ export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function History(arg1) {
   return window['go']['main']['App']['History'](arg1);
 }
