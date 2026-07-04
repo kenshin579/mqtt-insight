@@ -31,6 +31,7 @@
   { "version": "v0.3.0", "releaseURL": "https://github.com/.../releases/tag/v0.3.0", "assetURL": "https://.../mqtt-insight-v0.3.0-macos-universal.zip", "canSelfUpdate": true }
   ```
   `assetURL`은 실행 플랫폼용 자산(macOS: `*-macos-universal.zip`). 자산이 없으면 `assetURL`은 빈 문자열 → 프론트는 폴백 모드.
+  이벤트가 프론트 리스너 등록 전에 발사되는 레이스를 막기 위해 프론트는 mount 시 `GetUpdateInfo()`로 한 번 pull한다(push+pull 병용).
 - 체크 실패(네트워크·rate limit·파싱)는 조용히 무시, 로그만 남김.
 
 ### 알림 UI
@@ -48,6 +49,8 @@
 3. **교체** — `os.Executable()`에서 `.app` 루트 역산(`Contents/MacOS/` 상위). 기존 `.app` → `<이름>.app.bak` rename → 새 `.app`을 제자리로 move(임시 폴더가 다른 볼륨일 수 있으므로 rename 실패 시 복사 폴백). macOS는 실행 중 앱 디렉터리를 rename해도 프로세스가 유지된다(inode 기반).
 4. **재시작** — `open -n <교체된 .app>` 실행 후 `runtime.Quit()`.
 5. **정리** — 새 인스턴스가 시작 시 자기 옆의 `.app.bak`을 발견하면 삭제(교체 성공이 확인된 시점의 정리).
+
+수용 리스크: 3단계의 두 rename 사이(수 밀리초)에 프로세스가 강제 종료되면 `.app`이 `.app.bak`으로만 남는다. 이 창은 시스템 콜 2번 폭으로 극히 좁고, 복구는 `.bak`을 수동 rename하면 된다 — 저널링 수준의 방어는 YAGNI로 판단.
 
 ### 폴백 (릴리스 페이지 열기)
 
