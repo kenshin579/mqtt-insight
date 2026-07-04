@@ -10,6 +10,7 @@ func TestBundlePath(t *testing.T) {
 	}{
 		{"/Applications/mqtt-insight.app/Contents/MacOS/mqtt-insight", "/Applications/mqtt-insight.app", true},
 		{"/Users/x/Downloads/mqtt-insight.app/Contents/MacOS/mqtt-insight", "/Users/x/Downloads/mqtt-insight.app", true},
+		{"/Applications/Foo.app/Contents/MacOS/Helper.app/Contents/MacOS/Helper", "/Applications/Foo.app/Contents/MacOS/Helper.app", true}, // 중첩 번들 — 실행 파일을 직접 담은 안쪽 번들
 		{"/Users/x/go/bin/wails-dev-binary", "", false}, // wails dev 등 번들 밖
 	}
 	for _, c := range cases {

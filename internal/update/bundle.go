@@ -6,7 +6,7 @@ import "strings"
 // "/Applications/mqtt-insight.app/Contents/MacOS/mqtt-insight".
 // ok=false면 .app 번들 밖에서 실행 중(wails dev 등) — 자기교체 불가.
 func BundlePath(exe string) (string, bool) {
-	i := strings.Index(exe, ".app/Contents/MacOS/")
+	i := strings.LastIndex(exe, ".app/Contents/MacOS/")
 	if i < 0 {
 		return "", false
 	}
