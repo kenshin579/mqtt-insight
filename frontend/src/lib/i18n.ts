@@ -93,6 +93,10 @@ export const DICT = {
     lblWillPayload: 'Will 페이로드',
     lblWillQos: 'Will QoS',
     lblWillRetained: 'Will retained',
+    tabMessage: '메시지', tabChart: '차트',
+    chartNoNumeric: '이 토픽엔 숫자 데이터가 없어요',
+    chartNoNumericHint: '숫자 payload 또는 JSON의 숫자 필드가 있으면 차트가 그려져요.',
+    chartMaxKeys: '동시에 5개 키까지 표시할 수 있어요',
   },
   en: {
     tourTitle: 'Restart getting-started guide', setTitle: 'Settings',
@@ -175,5 +179,9 @@ export const DICT = {
     lblWillPayload: 'Will payload',
     lblWillQos: 'Will QoS',
     lblWillRetained: 'Will retained',
+    tabMessage: 'Message', tabChart: 'Chart',
+    chartNoNumeric: 'No numeric data on this topic',
+    chartNoNumericHint: 'Charts appear for numeric payloads or numeric JSON fields.',
+    chartMaxKeys: 'Up to 5 keys can be shown at once',
   },
 } as const;

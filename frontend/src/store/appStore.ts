@@ -26,6 +26,7 @@ interface AppState {
   // ui
   paused: boolean; searchOpen: boolean; searchQuery: string;
   diffOn: boolean; fmt: Fmt;
+  detailMode: "message" | "chart";
   clearedAt: Record<string, number>; // topic -> ms epoch; "" = all-topics baseline (F3)
   pubTopic: string; pubHint: boolean;
   treeHintDismissed: boolean; recToastShown: boolean;
@@ -48,6 +49,7 @@ interface AppState {
   setSearch: (open: boolean, query?: string) => void;
   toggleDiff: () => void;
   setFmt: (f: Fmt) => void;
+  setDetailMode: (m: "message" | "chart") => void;
   clearMessages: (topic: string | null) => void; // F3
   setPubTopic: (t: string, hint: boolean) => void;
   dismissTreeHint: () => void;
@@ -64,7 +66,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   tree: null, liveMessages: [], subs: [], recording: new Set<string>(),
   selectedTopic: null, selectedMsg: null, msgSource: "live",
   paused: false, searchOpen: false, searchQuery: "",
-  diffOn: false, fmt: "json", clearedAt: {},
+  diffOn: false, fmt: "json", detailMode: "message", clearedAt: {},
   pubTopic: "", pubHint: false,
   treeHintDismissed: false, recToastShown: false,
   settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200 },
@@ -101,6 +103,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ diffOn: on, ...(on ? { fmt: "json" as Fmt } : {}) }); // C33: 켜면 JSON 강제
   },
   setFmt: (f) => set({ fmt: f }),
+  setDetailMode: (m) => set({ detailMode: m }),
   // F3: clears the display only — History/QueryRecorded stay backend-owned, rows filter by clearedAt.
   clearMessages: (topic) => {
     const key = topic ?? "";

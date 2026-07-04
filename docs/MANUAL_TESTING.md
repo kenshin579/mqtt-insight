@@ -6,7 +6,18 @@
 
 ## 준비
 
-로컬 브로커(Mosquitto, Docker):
+**원커맨드 (권장)** — 브로커 + retained 시드 + 앱 + 라이브 피드를 한 번에:
+
+```bash
+./run.sh          # 전부 실행
+./run.sh down     # 전부 정리
+./run.sh app      # 코드 수정 후 앱만 재빌드+재실행
+./run.sh status   # 상태 확인
+```
+
+세부 제어는 `scripts/dev-env.sh` 참조 (`feed` 서브커맨드, `INTERVAL`/`DURATION` 환경변수).
+
+<details><summary>수동 셋업 (스크립트 없이)</summary>
 
 ```bash
 docker run -d --name mosq -p 1883:1883 eclipse-mosquitto:2 \
@@ -14,6 +25,7 @@ docker run -d --name mosq -p 1883:1883 eclipse-mosquitto:2 \
 ```
 
 앱 실행: `wails dev` (또는 `wails build -clean` 후 `open build/bin/mqtt-insight.app`)
+</details>
 
 메시지 발행용 CLI(별도 터미널):
 
@@ -121,6 +133,21 @@ docker restart mosq
 - [ ] Diff on && 현재·직전 메시지가 모두 JSON 객체일 때: 변경된 키(노란 배경 + `← 이전값`), 추가된 키(초록 배경), 삭제된 키(빨강 배경 + 취소선), 변경 없는 키는 일반 표시(B36)
 - [ ] Diff on이지만 비교 불가(직전 메시지 없음/배열/비-JSON)일 때 → 일반 페이로드 렌더로 폴백하되 Diff 버튼은 계속 활성 표시 유지(F15)
 - [ ] content-type/response-topic/user property가 있는 메시지(5.0 연결) → 한 줄로 " · " 구분 조인되어 표시됨(G17, 이전엔 여러 줄이었음)
+
+## 차트 (v2 인사이트)
+사전: `docker exec mosq mosquitto_pub -t s/j -m '{"temp":23.4,"hum":61}'` 반복 + `mosquitto_pub -t s/n -m 23.4` 반복
+- [ ] JSON 토픽 선택 → 상세 "차트" 탭 → temp/hum 키 칩 표시, 첫 키만 활성
+- [ ] 칩 토글로 미니 차트 추가/제거 — 각 차트 자체 y스케일, 키 색 고정(토글해도 불변)
+- [ ] 미니 차트 2개 이상일 때 hover 크로스헤어 동기화 + 툴팁(시각·값)
+- [ ] 헤더 스탯 now/min/max/avg 실시간 갱신
+- [ ] plain 숫자 토픽(s/n) → `value` 단일 키 차트
+- [ ] 문자열 payload 섞인 메시지 → 차트에 갭(선 끊김)
+- [ ] 숫자 없는 토픽 → "숫자 데이터가 없어요" empty state
+- [ ] 일시정지 → 차트도 스냅샷 고정, 재개 시 갱신
+- [ ] 기록 토픽에서 Recorded 전환 → 긴 히스토리 차트, Refresh 동작
+- [ ] 설정 라이트 테마 → 차트 시리즈 색이 라이트 팔레트로 전환
+- [ ] 모드 탭이 토픽 바꿔도 유지(sticky), 메시지 탭 복귀 시 포맷/Diff 정상
+- [ ] 토픽 선택 시 툴바 msg/s가 해당 토픽 기준(전체 뷰 대비 값 감소 확인)
 
 ## 9. 발행 패널 (B37~B42)
 
