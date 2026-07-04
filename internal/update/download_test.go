@@ -12,7 +12,7 @@ import (
 )
 
 func TestDownloadReportsProgress(t *testing.T) {
-	payload := bytes.Repeat([]byte("x"), 300*1024) // 300KB, größer als 128KB Puffer → mehrere Fortschrittsberichte
+	payload := bytes.Repeat([]byte("x"), 300*1024) // 128KB 버퍼보다 크게 → 진행률 여러 번
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Length", strconv.Itoa(len(payload)))
 		_, _ = w.Write(payload)
