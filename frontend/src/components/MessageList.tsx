@@ -122,9 +122,13 @@ export function MessageList() {
   }, []);
   const recentCount = useMemo(() => {
     const cut = Date.now() - RATE_WINDOW_MS;
-    return liveMessages.reduce((n, m) => (new Date(m.timestamp).getTime() > cut ? n + 1 : n), 0);
+    return liveMessages.reduce(
+      (n, m) =>
+        new Date(m.timestamp).getTime() > cut && (!selectedTopic || m.topic === selectedTopic) ? n + 1 : n,
+      0,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveMessages]);
+  }, [liveMessages, selectedTopic]);
   const msgRate = (recentCount / (RATE_WINDOW_MS / 1000)).toFixed(1);
   const showRate = recentCount > 0;
 
