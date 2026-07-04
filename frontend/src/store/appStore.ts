@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Message, TreeNode, Status } from "../types";
+import type { Message, TreeNode, Status, UpdateInfo } from "../types";
 import type { Sub } from "../lib/mqttMatch";
 import type { ConnectError } from "../lib/connectError";
 import type { Lang } from "../lib/i18n";
@@ -11,6 +11,7 @@ export interface SettingsState {
   lang: Lang; theme: "dark" | "light" | "system";
   defaultFormat: Fmt; timestampFormat: "absolute" | "relative";
   messageOrder: "newest" | "oldest"; ringBufferSize: number;
+  checkUpdates: boolean;
 }
 
 interface AppState {
@@ -31,6 +32,10 @@ interface AppState {
   pubTopic: string; pubHint: boolean;
   treeHintDismissed: boolean; recToastShown: boolean;
   settings: SettingsState;
+  // update
+  updateInfo: UpdateInfo | null;
+  updateProgress: number | null; // null = 진행 중 아님
+  updateError: string | null;
   // actions
   setStatus: (s: Status, attempt?: number) => void;
   setBroker: (b: string) => void;
@@ -55,6 +60,9 @@ interface AppState {
   dismissTreeHint: () => void;
   markRecToastShown: () => void;
   setSettings: (s: Partial<SettingsState>) => void;
+  setUpdateInfo: (i: UpdateInfo | null) => void;
+  setUpdateProgress: (p: number | null) => void;
+  setUpdateError: (e: string | null) => void;
   resetSession: () => void; // 새 연결 시(C4/C12): 데이터·구독·선택 초기화
 }
 
@@ -69,7 +77,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   diffOn: false, fmt: "json", detailMode: "message", clearedAt: {},
   pubTopic: "", pubHint: false,
   treeHintDismissed: false, recToastShown: false,
-  settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200 },
+  settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200, checkUpdates: true },
+  updateInfo: null, updateProgress: null, updateError: null,
 
   setStatus: (s, attempt = 0) => set({ status: s, attempt }),
   setBroker: (b) => set({ broker: b }),
@@ -117,6 +126,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   dismissTreeHint: () => set({ treeHintDismissed: true }),
   markRecToastShown: () => set({ recToastShown: true }),
   setSettings: (s) => set({ settings: { ...get().settings, ...s } }),
+  setUpdateInfo: (i) => set({ updateInfo: i }),
+  setUpdateProgress: (p) => set({ updateProgress: p }),
+  setUpdateError: (e) => set({ updateError: e }),
   resetSession: () =>
     set({
       tree: null, liveMessages: [], subs: [], selectedTopic: null, selectedMsg: null,
