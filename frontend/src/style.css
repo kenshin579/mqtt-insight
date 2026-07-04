@@ -1,16 +1,14 @@
-html {
-    background-color: rgba(27, 38, 54, 1);
-    text-align: center;
-    color: white;
+html,
+body {
+    margin: 0;
 }
 
 body {
-    margin: 0;
-    color: white;
+    color: var(--text);
+    background: var(--bg);
     font-family: var(--font-ui);
 }
 
 #app {
     height: 100vh;
-    text-align: center;
 }
