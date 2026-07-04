@@ -170,7 +170,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             {updateError && (
               <div className="settings-update-error">
                 {t("updError", { msg: updateError })}{" "}
-                <a onClick={() => BrowserOpenURL(updateInfo.releaseURL)}>{t("updOpenRelease")}</a>
+                <a href={updateInfo.releaseURL} onClick={(e) => { e.preventDefault(); BrowserOpenURL(updateInfo.releaseURL); }}>{t("updOpenRelease")}</a>
               </div>
             )}
           </div>
