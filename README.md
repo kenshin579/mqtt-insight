@@ -2,17 +2,6 @@
 
 An open-source MQTT desktop client for IoT/embedded debugging, built with Wails + Go + React.
 
-![Topic tree, live messages and real-time charts](docs/screenshots/chart-view.png)
-
-<details>
-<summary>More screenshots</summary>
-
-**Connection launcher**
-
-![Connection profiles launcher](docs/screenshots/connection-home.png)
-
-</details>
-
 ## Install
 
 Download the latest build from [Releases](https://github.com/kenshin579/mqtt-insight/releases).
@@ -35,6 +24,16 @@ If SmartScreen warns, choose "More info" → "Run anyway".
 - Publish panel with QoS, retained flag, and MQTT 5.0 properties (user properties, content type, etc.)
 - Optional per-topic message recording to SQLite
 - Dark and light themes, configurable ring buffer size and default payload format
+
+## Screenshots
+
+**Main view** — topic tree with live subscriptions, real-time message stream, and per-key numeric charts (small multiples with now/min/max/avg stats):
+
+![Main view: topic tree, live messages and real-time charts](docs/screenshots/chart-view.png)
+
+**Connection launcher** — saved connection profiles with one-click (or double-click) connect:
+
+![Connection launcher with saved profiles](docs/screenshots/connection-home.png)
 
 ## Development
 
