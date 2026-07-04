@@ -6,7 +6,18 @@
 
 ## 준비
 
-로컬 브로커(Mosquitto, Docker):
+**원커맨드 (권장)** — 브로커 + retained 시드 + 앱 + 라이브 피드를 한 번에:
+
+```bash
+./run.sh          # 전부 실행
+./run.sh down     # 전부 정리
+./run.sh app      # 코드 수정 후 앱만 재빌드+재실행
+./run.sh status   # 상태 확인
+```
+
+세부 제어는 `scripts/dev-env.sh` 참조 (`feed` 서브커맨드, `INTERVAL`/`DURATION` 환경변수).
+
+<details><summary>수동 셋업 (스크립트 없이)</summary>
 
 ```bash
 docker run -d --name mosq -p 1883:1883 eclipse-mosquitto:2 \
@@ -14,6 +25,7 @@ docker run -d --name mosq -p 1883:1883 eclipse-mosquitto:2 \
 ```
 
 앱 실행: `wails dev` (또는 `wails build -clean` 후 `open build/bin/mqtt-insight.app`)
+</details>
 
 메시지 발행용 CLI(별도 터미널):
 
