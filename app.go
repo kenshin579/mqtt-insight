@@ -266,3 +266,6 @@ func (a *App) RecordedTopics() []string {
 	}
 	return a.recorder.Topics()
 }
+
+// GetVersion returns the app version injected at build time ("dev" for local builds).
+func (a *App) GetVersion() string { return version }

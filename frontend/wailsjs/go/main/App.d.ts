@@ -19,6 +19,8 @@ export function GetProfiles():Promise<Array<config.Profile>>;
 
 export function GetSettings():Promise<config.Settings>;
 
+export function GetVersion():Promise<string>;
+
 export function History(arg1:string):Promise<Array<mqtt.Message>>;
 
 export function Publish(arg1:mqtt.Message):Promise<void>;
