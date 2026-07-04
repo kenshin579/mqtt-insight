@@ -13,7 +13,7 @@ export interface UPlotChartProps {
   label: string;               // 시리즈명 (툴팁/범례용)
 }
 
-/** Thin uPlot wrapper: one line series, crosshair+tooltip, width tracks container. */
+/** Thin uPlot wrapper: one line series, crosshair + cursor-following tooltip, width tracks container. */
 export function UPlotChart({ times, values, color, height, label }: UPlotChartProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<uPlot | null>(null);
@@ -21,6 +21,12 @@ export function UPlotChart({ times, values, color, height, label }: UPlotChartPr
   useEffect(() => {
     const host = hostRef.current;
     if (!host) return;
+
+    // FIX 2 (spec §3): 커서를 따라다니는 툴팁 — HH:MM:SS + 값
+    const tip = document.createElement("div");
+    tip.className = "uplot-tip";
+    tip.style.display = "none";
+
     const opts: uPlot.Options = {
       width: host.clientWidth || 300,
       height,
@@ -35,6 +41,32 @@ export function UPlotChart({ times, values, color, height, label }: UPlotChartPr
         {},
         { label, stroke: color, width: 2, points: { show: false }, spanGaps: false },
       ],
+      hooks: {
+        init: [
+          (u) => {
+            u.over.appendChild(tip);
+          },
+        ],
+        setCursor: [
+          (u) => {
+            const { idx, left, top } = u.cursor;
+            if (idx == null || left == null || left < 0) {
+              tip.style.display = "none";
+              return;
+            }
+            const v = u.data[1][idx];
+            if (v == null) {
+              tip.style.display = "none";
+              return;
+            }
+            const ts = new Date((u.data[0][idx] as number) * 1000);
+            tip.textContent = `${ts.toLocaleTimeString("en-GB")}  ${v}`;
+            tip.style.display = "block";
+            tip.style.left = `${Math.min(left + 8, u.over.clientWidth - tip.offsetWidth - 4)}px`;
+            tip.style.top = `${Math.max((top ?? 0) - 24, 0)}px`;
+          },
+        ],
+      },
     };
     // uPlot expects x in SECONDS when time:true
     const data: uPlot.AlignedData = [times.map((t) => t / 1000), values];

@@ -353,3 +353,5 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .uplot-host { width: 100%; }
 /* uPlot 내부 텍스트를 토큰에 맞춤 */
 .uplot, .uplot *, .u-legend { font-family: var(--font-mono) !important; font-size: 9.5px !important; color: var(--dim2) !important; }
+/* FIX 2: 커서를 따라다니는 툴팁 (스펙 §3) */
+.uplot-tip { position: absolute; z-index: 10; pointer-events: none; background: var(--modal); border: 1px solid var(--border); border-radius: 5px; padding: 2px 7px; font-family: var(--font-mono); font-size: 10px !important; color: var(--text) !important; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
