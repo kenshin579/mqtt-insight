@@ -227,7 +227,7 @@ export function MessageList() {
             </FixedSizeList>
           )}
         </div>
-        {selectedMsg && <MessageDetail msg={selectedMsg} prev={prevMsg} />}
+        {selectedMsg && <MessageDetail msg={selectedMsg} prev={prevMsg} rows={baseRows} />}
       </div>
     </div>
   );
