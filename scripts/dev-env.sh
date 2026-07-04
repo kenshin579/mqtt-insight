@@ -56,6 +56,8 @@ feed_stop() {
   rm -f "$FEED_PID"
 }
 
+feed_running() { [[ -f "$FEED_PID" ]] && kill -0 "$(cat "$FEED_PID")" 2>/dev/null; }
+
 feed_start() {
   feed_stop
   local ticks=$((DURATION / INTERVAL))
@@ -80,15 +82,23 @@ feed_start() {
   echo "feed: ${INTERVAL}s 간격, ${DURATION}s (pid $(cat "$FEED_PID")) — temp 사인파·hum·간헐 pressure"
 }
 
-app_stop() { pkill -f "$APP_BIN" 2>/dev/null && echo "app: 종료" || true; }
+app_stop() { pkill -x mqtt-insight 2>/dev/null && echo "app: 종료" || true; }
 
+# 번들 실행·wails dev 어느 쪽이든 프로세스명 mqtt-insight로 감지
+app_pid() { pgrep -x mqtt-insight 2>/dev/null | head -1; }
+
+# up용 — 이미 실행 중(수동 실행 포함)이면 건드리지 않는다 (멱등)
 app_start() {
+  local pid
+  pid=$(app_pid)
+  if [[ -n "$pid" ]]; then
+    echo "app: 이미 실행 중 (pid $pid) — 유지"
+    return
+  fi
   if [[ ! -x "$APP_BIN" ]]; then
     echo "app: 빌드 없음 — wails build 실행"
     (cd "$ROOT" && wails build) | grep -E "Built|ERROR" || true
   fi
-  app_stop
-  sleep 1
   open "$APP_BUNDLE"
   echo "app: 실행됨"
 }
@@ -103,16 +113,32 @@ app_rebuild() {
 
 status() {
   if docker ps --format '{{.Names}} {{.Status}}' 2>/dev/null | grep "^${BROKER}"; then :; else echo "broker: 없음"; fi
-  pgrep -f "$APP_BIN" >/dev/null && echo "app: 실행 중 (pid $(pgrep -f "$APP_BIN" | head -1))" || echo "app: 없음"
-  if [[ -f "$FEED_PID" ]] && kill -0 "$(cat "$FEED_PID")" 2>/dev/null; then
+  local pid
+  pid=$(app_pid)
+  [[ -n "$pid" ]] && echo "app: 실행 중 (pid $pid)" || echo "app: 없음"
+  if feed_running; then
     echo "feed: 실행 중 (pid $(cat "$FEED_PID"))"
   else
     echo "feed: 없음"
   fi
 }
 
+# up: 멱등 — 이미 떠 있는 구성요소(수동 실행 앱 포함)는 유지, 없는 것만 띄운다
+up() {
+  broker_up
+  seed
+  app_start
+  if feed_running; then
+    echo "feed: 이미 실행 중 (pid $(cat "$FEED_PID")) — 유지"
+  else
+    feed_start
+  fi
+  echo
+  status
+}
+
 case "${1:-}" in
-  up)     broker_up; seed; app_start; feed_start; echo; status ;;
+  up)     up ;;
   down)   feed_stop; app_stop; docker rm -f "$BROKER" >/dev/null 2>&1 && echo "broker: 삭제" || echo "broker: 없음" ;;
   feed)   broker_up >/dev/null; feed_start ;;
   app)    app_rebuild ;;
