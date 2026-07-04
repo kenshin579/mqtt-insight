@@ -338,3 +338,18 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 
 .pub-payload { flex: 1; background: var(--input); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
   color: var(--text); font-size: 12px; resize: none; outline: none; line-height: 1.5; }
+
+/* === TopicChart (v2 charts) === */
+.topic-chart { padding: 8px 10px; display: flex; flex-direction: column; gap: 10px; }
+.chart-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chart-chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10.5px; padding: 3px 9px; border-radius: 14px; background: var(--chip); border: 1px solid var(--btnborder); color: var(--dim); }
+.chart-chip.on { background: rgba(79,140,255,.13); border-color: rgba(79,140,255,.35); color: var(--text2); }
+.cdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.chart-panel { display: flex; flex-direction: column; gap: 4px; }
+.chart-panel-head { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.chart-key { color: var(--text2); font-weight: 600; }
+.chart-stats { margin-left: auto; color: var(--dim); font-size: 10.5px; }
+.chart-stats b { color: var(--text); font-weight: 600; font-family: var(--font-mono); }
+.uplot-host { width: 100%; }
+/* uPlot 내부 텍스트를 토큰에 맞춤 */
+.uplot, .uplot *, .u-legend { font-family: var(--font-mono) !important; font-size: 9.5px !important; color: var(--dim2) !important; }
