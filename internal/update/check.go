@@ -15,7 +15,7 @@ const DefaultAPIURL = "https://api.github.com/repos/kenshin579/mqtt-insight/rele
 type Info struct {
 	Version       string `json:"version"`
 	ReleaseURL    string `json:"releaseURL"`
-	AssetURL      string `json:"assetURL"`       // "" = 플랫폼 자산 없음 → 폴백
+	AssetURL      string `json:"assetURL"`      // "" = 플랫폼 자산 없음 → 폴백
 	CanSelfUpdate bool   `json:"canSelfUpdate"` // 호출자(app.go)가 실행 환경 보고 채움
 }
 
