@@ -25,6 +25,16 @@ If SmartScreen warns, choose "More info" → "Run anyway".
 - Optional per-topic message recording to SQLite
 - Dark and light themes, configurable ring buffer size and default payload format
 
+## Screenshots
+
+**Connection launcher** — saved connection profiles with one-click (or double-click) connect:
+
+![Connection launcher with saved profiles](docs/screenshots/connection-home.png)
+
+**Main view** — topic tree with live subscriptions, real-time message stream, and per-key numeric charts (small multiples with now/min/max/avg stats):
+
+![Main view: topic tree, live messages and real-time charts](docs/screenshots/chart-view.png)
+
 ## Development
 
 ```bash
