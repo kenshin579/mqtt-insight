@@ -52,8 +52,12 @@ jobs:
       - name: Package artifacts
         shell: bash
         run: |
-          mv "build/bin/mqtt-insight-amd64-installer.exe" "mqtt-insight-${GITHUB_REF_NAME}-windows-amd64-installer.exe"
-          7z a "mqtt-insight-${GITHUB_REF_NAME}-windows-amd64-portable.zip" ./build/bin/mqtt-insight.exe
+          ls -la build/bin
+          # NSIS 산출 파일명은 wails 버전에 따라 다름 — 글롭으로 견고하게 탐색
+          installer=$(ls build/bin/*installer*.exe | head -1)
+          mv "$installer" "mqtt-insight-${GITHUB_REF_NAME}-windows-amd64-installer.exe"
+          exe=$(ls build/bin/*.exe | head -1)
+          7z a "mqtt-insight-${GITHUB_REF_NAME}-windows-amd64-portable.zip" "$exe"
       - uses: actions/upload-artifact@v4
         with:
           name: windows
