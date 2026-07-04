@@ -93,4 +93,14 @@ func TestApplyNoAppInArchive(t *testing.T) {
 	if got := readMarker(t, appPath); got != "old" {
 		t.Errorf("marker = %q, want old (untouched)", got)
 	}
+	// 실패 경로에서도 스테이징 임시 디렉터리가 남지 않아야 한다
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() != "mqtt-insight.app" {
+			t.Errorf("unexpected leftover: %s", e.Name())
+		}
+	}
 }
