@@ -27,6 +27,19 @@ export function UPlotChart({ times, values, color, height, label }: UPlotChartPr
     tip.className = "uplot-tip";
     tip.style.display = "none";
 
+    // uPlot은 축/그리드를 canvas에 그리므로 CSS 변수를 쓸 수 없다 — 실제 색으로 해석해서 전달.
+    // (var(--x) 문자열은 canvas에서 무효 → 라벨이 이전 fillStyle/검정으로 그려져 안 보이는 버그의 원인)
+    const css = getComputedStyle(document.documentElement);
+    const axisColor = css.getPropertyValue("--dim2").trim() || "#6a6a76";
+    const gridColor = css.getPropertyValue("--line").trim() || "#2e2e37";
+    const axisFont = `10px ${css.getPropertyValue("--font-mono").trim() || "ui-monospace, monospace"}`;
+    const axisBase = {
+      stroke: axisColor,
+      font: axisFont,
+      grid: { stroke: gridColor, width: 1 },
+      ticks: { show: false },
+    } as const;
+
     const opts: uPlot.Options = {
       width: host.clientWidth || 300,
       height,
@@ -34,8 +47,8 @@ export function UPlotChart({ times, values, color, height, label }: UPlotChartPr
       legend: { show: false }, // 단일 시리즈 — 칩/헤더가 범례 역할 (dataviz: 1시리즈는 legend box 불필요)
       scales: { x: { time: true } },
       axes: [
-        { stroke: "var(--dim2)", grid: { stroke: "var(--line)", width: 1 }, ticks: { show: false } },
-        { stroke: "var(--dim2)", grid: { stroke: "var(--line)", width: 1 }, ticks: { show: false }, size: 46 },
+        { ...axisBase },
+        { ...axisBase, size: 46 },
       ],
       series: [
         {},
