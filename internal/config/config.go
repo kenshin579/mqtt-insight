@@ -31,14 +31,15 @@ type Profile struct {
 
 // Settings holds app-wide preferences.
 type Settings struct {
-	Theme             string `json:"theme"`             // dark | light
-	RingBufferSize    int    `json:"ringBufferSize"`    // per-topic message cap
-	DefaultFormat     string `json:"defaultFormat"`     // plain | json | hex | base64
-	Lang              string `json:"lang"`              // ko | en
-	TimestampFormat   string `json:"timestampFormat"`   // absolute | relative
-	MessageOrder      string `json:"messageOrder"`      // newest | oldest
+	Theme             string `json:"theme"`           // dark | light
+	RingBufferSize    int    `json:"ringBufferSize"`  // per-topic message cap
+	DefaultFormat     string `json:"defaultFormat"`   // plain | json | hex | base64
+	Lang              string `json:"lang"`            // ko | en
+	TimestampFormat   string `json:"timestampFormat"` // absolute | relative
+	MessageOrder      string `json:"messageOrder"`    // newest | oldest
 	TreeHintDismissed bool   `json:"treeHintDismissed"`
 	RecToastShown     bool   `json:"recToastShown"`
+	CheckUpdates      bool   `json:"checkUpdates"` // 시작 시 새 버전 확인
 }
 
 // Config is the whole persisted document.
@@ -51,6 +52,7 @@ func defaults() *Config {
 	return &Config{Settings: Settings{
 		Theme: "dark", RingBufferSize: 200, DefaultFormat: "plain",
 		Lang: "ko", TimestampFormat: "absolute", MessageOrder: "newest",
+		CheckUpdates: true,
 	}}
 }
 

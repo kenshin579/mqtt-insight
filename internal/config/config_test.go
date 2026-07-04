@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -78,5 +79,39 @@ func TestHasHostPort(t *testing.T) {
 	}
 	if c.HasHostPort("h", 8883) {
 		t.Fatal("expected false for different port")
+	}
+}
+
+func TestCheckUpdatesDefaultsTrueForLegacyFile(t *testing.T) {
+	// 기존 사용자의 설정 파일에는 checkUpdates 필드가 없다 → true 유지
+	path := filepath.Join(t.TempDir(), "config.json")
+	legacy := `{"settings":{"theme":"light","ringBufferSize":100},"profiles":[]}`
+	if err := os.WriteFile(path, []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Settings.CheckUpdates {
+		t.Error("CheckUpdates should default to true for legacy config")
+	}
+	if cfg.Settings.Theme != "light" {
+		t.Errorf("Theme = %q, want light (merge preserved)", cfg.Settings.Theme)
+	}
+}
+
+func TestCheckUpdatesExplicitFalse(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	body := `{"settings":{"checkUpdates":false},"profiles":[]}`
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Settings.CheckUpdates {
+		t.Error("CheckUpdates should honor explicit false")
 	}
 }
