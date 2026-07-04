@@ -46,9 +46,13 @@ jobs:
           node-version: "22"
       - name: Install wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.11.0
-      # windows-latest 러너에는 NSIS가 없어 wails -nsis가 조용히 스킵됨 — 명시 설치
+      # windows-latest 러너에는 NSIS가 없어 wails -nsis가 조용히 스킵됨 — 명시 설치.
+      # choco nsis 패키지는 makensis를 PATH에 안 올리므로 GITHUB_PATH에 직접 추가.
       - name: Install NSIS
-        run: choco install nsis -y
+        shell: bash
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" >> "$GITHUB_PATH"
       - name: Build (amd64 + NSIS)
         shell: bash
         run: wails build -platform windows/amd64 -nsis -ldflags "-X main.version=${GITHUB_REF_NAME}"
