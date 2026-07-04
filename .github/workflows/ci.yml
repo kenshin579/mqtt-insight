@@ -14,11 +14,14 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      # frontend/dist는 gitignore됨 — go:embed가 요구하므로 Go 테스트 전에 먼저 빌드한다
+      # frontend/dist는 gitignore됨 — go:embed가 요구하므로 Go 테스트 전에 먼저 빌드한다.
+      # npm ci 대신 npm install 사용: esbuild 0.15/0.28 혼재 트리에서 npm이 lockfile의
+      # 플랫폼 optional 플래그를 누락해 npm ci가 EBADPLATFORM으로 실패하는 버그 회피.
+      # (릴리스 빌드도 wails.json frontend:install=npm install을 사용 — 동일 정렬)
       - name: Frontend build, tests & typecheck
         working-directory: frontend
         run: |
-          npm ci
+          npm install
           npm run build
           npx vitest run
           npx tsc --noEmit
