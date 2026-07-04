@@ -42,10 +42,12 @@ go test -tags=integration ./internal/mqtt/
 cd frontend && npm test
 ```
 
-## Roadmap (v2+)
+## Roadmap
 
-The following are planned but not yet implemented: value-change diff highlighting, real-time numeric payload charts, multiple simultaneous connections, and mTLS.
+Implemented: topic tree, value-change diff highlighting, real-time numeric payload charts with stats, per-topic recording (SQLite), MQTT 5.0 properties, ko/en i18n, dark/light/system themes.
+
+Planned: nested JSON path charts, multi-topic chart comparison, chart/data export, mTLS. Multiple simultaneous connections are intentionally out of scope.
 
 ## License
 
-TBD
+[MIT](LICENSE)
