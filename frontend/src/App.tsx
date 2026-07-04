@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { initEventBridge } from "./bridge/events";
 import { useAppStore } from "./store/appStore";
-import { Connect, GetProfiles, GetSettings, RecordedTopics } from "../wailsjs/go/main/App";
+import { Connect, GetProfiles, GetSettings, RecordedTopics, GetUpdateInfo } from "../wailsjs/go/main/App";
 import { config } from "../wailsjs/go/models";
 import { setLang, t } from "./lib/i18n";
 import { applyTheme } from "./lib/theme";
@@ -29,6 +29,8 @@ function App() {
   const dismissTreeHint = useAppStore((s) => s.dismissTreeHint);
   const markRecToastShown = useAppStore((s) => s.markRecToastShown);
   const setFmt = useAppStore((s) => s.setFmt);
+  const updateInfo = useAppStore((s) => s.updateInfo);
+  const setUpdateInfo = useAppStore((s) => s.setUpdateInfo);
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [showConnect, setShowConnect] = useState(false);
   const [editProfile, setEditProfile] = useState<config.Profile | null>(null); // C9: 편집 진입
@@ -50,6 +52,7 @@ function App() {
       if (s.recToastShown) markRecToastShown();
       setFmt((s.defaultFormat as import("./store/appStore").Fmt) || "plain"); // G5: initial fmt = settings default
     });
+    GetUpdateInfo().then((i) => { if (i) setUpdateInfo(i as import("./types").UpdateInfo); });
     return cleanup;
   }, []);
 
@@ -87,7 +90,9 @@ function App() {
         <span className="app-name">MQTT Insight</span>
         <span className="spacer" />
         <button className="tb-btn" title={t("tourTitle")} onClick={() => setShowGuide(true)}>?</button>
-        <button className="tb-btn gear" title={t("setTitle")} onClick={() => setShowSettings(true)}>⚙</button>
+        <button className="tb-btn gear" title={t("setTitle")} onClick={() => setShowSettings(true)}>
+          ⚙{updateInfo && <i className="upd-dot" />}
+        </button>
       </div>
       <ConnectionBar onOpenConnect={() => openConnect()} />
       <ReconnectBanner onReconnect={() => lastProfile && reconnectWith(lastProfile)} />

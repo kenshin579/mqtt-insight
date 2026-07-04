@@ -22,3 +22,11 @@ export interface TreeNode {
 
 export type Status = "disconnected" | "connecting" | "connected" | "reconnecting";
 export interface StatusEvent { state: Status; attempt: number; reason: string }
+
+/** Go update.Info 미러 — update:available 이벤트/GetUpdateInfo 페이로드 */
+export interface UpdateInfo {
+  version: string;
+  releaseURL: string;
+  assetURL: string;
+  canSelfUpdate: boolean;
+}
