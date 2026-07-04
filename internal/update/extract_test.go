@@ -98,3 +98,32 @@ func TestExtractZipRejectsPathEscape(t *testing.T) {
 		t.Error("expected error for zip entry escaping destination")
 	}
 }
+
+func TestExtractZipRejectsEscapingSymlink(t *testing.T) {
+	cases := []struct{ name, target string }{
+		{"abs", "/etc"},
+		{"rel", "../../outside"},
+	}
+	for _, c := range cases {
+		dir := t.TempDir()
+		zipPath := filepath.Join(dir, c.name+".zip")
+		f, err := os.Create(zipPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		w := zip.NewWriter(f)
+		sh := &zip.FileHeader{Name: "Demo.app/badlink"}
+		sh.SetMode(os.ModeSymlink | 0o777)
+		sw, err := w.CreateHeader(sh)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, _ = sw.Write([]byte(c.target))
+		_ = w.Close()
+		_ = f.Close()
+
+		if err := extractZip(zipPath, filepath.Join(dir, "out")); err == nil {
+			t.Errorf("%s: expected error for symlink target %q", c.name, c.target)
+		}
+	}
+}

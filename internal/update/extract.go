@@ -34,10 +34,17 @@ func extractZip(src, destDir string) error {
 			if err != nil {
 				return err
 			}
+			// symlink 변종 zip-slip 방지: 절대경로·destDir 밖을 가리키는 대상 거부
+			// (.app 번들의 정상 symlink는 얕은 상대경로다)
+			link := string(linkTarget)
+			resolved := filepath.Join(filepath.Dir(target), link)
+			if filepath.IsAbs(link) || !strings.HasPrefix(resolved, cleanDest+string(os.PathSeparator)) {
+				return fmt.Errorf("symlink target escapes destination: %s -> %s", f.Name, link)
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return err
 			}
-			if err := os.Symlink(string(linkTarget), target); err != nil {
+			if err := os.Symlink(link, target); err != nil {
 				return err
 			}
 		default:
