@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -284,16 +286,21 @@ func (a *App) GetVersion() string { return version }
 // --- In-app update (spec: docs/superpowers/specs/2026-07-05-in-app-update-design.md) ---
 
 // checkForUpdate queries GitHub once and stores/broadcasts the result.
-// 실패는 조용히 무시한다(다음 실행에서 재시도되는 셈).
+// 실패는 로그만 남기고 무시한다(다음 실행에서 재시도되는 셈).
 func (a *App) checkForUpdate() {
 	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Second)
 	defer cancel()
 	info, err := update.Check(ctx, update.DefaultAPIURL, version, goruntime.GOOS)
-	if err != nil || info == nil {
+	if err != nil {
+		log.Printf("update check: %v", err)
+		return
+	}
+	if info == nil {
 		return
 	}
 	_, ok := selfUpdatePath()
-	info.CanSelfUpdate = ok && info.AssetURL != ""
+	// https 강제: assetURL은 GitHub API(TLS) 응답에서 오지만 방어적으로 한 번 더 확인
+	info.CanSelfUpdate = ok && strings.HasPrefix(info.AssetURL, "https://")
 	a.mu.Lock()
 	a.updateInfo = info
 	a.mu.Unlock()

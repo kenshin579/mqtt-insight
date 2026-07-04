@@ -24,7 +24,7 @@
 
 ### 감지 (시작 시 1회)
 
-- 프론트 ready 후 백그라운드 goroutine에서 GitHub API 호출 (타임아웃 10초).
+- 앱 시작(OnStartup) 시 백그라운드 goroutine에서 GitHub API 호출 (타임아웃 10초) — 프론트 ready 전에 끝날 수 있으나 아래 push+pull 병용으로 안전.
 - 현재 버전이 `dev`(로컬 빌드)이거나 설정 토글이 꺼져 있으면 체크 스킵.
 - `tag_name` > 현재 버전이면 Wails 이벤트 `update:available` emit:
   ```json
@@ -73,15 +73,18 @@
 
 **신규 — Go `internal/update/`**
 
-- `check.go` — `Check(current string) (*Info, error)`: GitHub API 호출, semver 비교, 플랫폼 자산 선택. `Info{Version, ReleaseURL, AssetURL, CanSelfUpdate}`
+- `check.go` — `Check(ctx, apiURL, current, goos) (*Info, error)`: GitHub API 호출, semver 비교, 플랫폼 자산 선택. `Info{Version, ReleaseURL, AssetURL, CanSelfUpdate}`
 - `semver.go` — `v` prefix 허용 태그 비교(외부 의존성 없이 단순 구현)
-- `apply.go` — `Apply(ctx, assetURL, progress func(int)) error`: 다운로드 → 추출 → 교체 오케스트레이션. 플랫폼 판단·번들 경로 역산 포함
-- `apply_darwin.go` — `.app` swap/rollback, `open -n` 재실행
-- `cleanup.go` — 시작 시 `.bak` 정리
+- `bundle.go` — 실행 경로 → `.app` 루트 역산(`BundlePath`), translocation 판정(`IsTranslocated`)
+- `download.go` — 진행률 콜백 붙은 HTTP 다운로드
+- `extract.go` — 퍼미션·symlink 보존 zip 추출 (zip-slip·symlink escape 방어)
+- `swap.go` — `.app` rename swap/rollback(`swapBundle`), 시작 시 `.bak` 정리(`CleanupBak`)
+- `apply.go` — `Apply(ctx, assetURL, appPath, progress func(int)) error`: 다운로드 → 추출 → 교체 오케스트레이션
+- `relaunch_darwin.go` / `relaunch_other.go` — `open -n` 재실행 (빌드 태그 분리)
 
 **수정**
 
-- `app.go` — startup에서 goroutine으로 Check 후 `update:available` emit; `ApplyUpdate()` 바인딩 추가; startup 시 `update.Cleanup()` 호출
+- `app.go` — startup에서 goroutine으로 Check 후 `update:available` emit; `GetUpdateInfo()`/`ApplyUpdate()` 바인딩 추가 (자기교체 가능 판정 `selfUpdatePath()` 포함); startup 시 `update.CleanupBak()` 호출
 - `internal/config/` — 설정에 `checkUpdates bool` 필드(기본 true, 기존 설정 파일에 필드 없으면 true로 마이그레이션)
 - `frontend/src/bridge/events.ts` — `update:available` / `update:progress` / `update:error` 수신
 - `frontend/src/store/appStore.ts` — `updateInfo`, `updateProgress`, `updateError` 상태
@@ -91,7 +94,7 @@
 ## 5. 테스트
 
 - `internal/update/` 단위 테스트: semver 비교 케이스, `httptest` 기반 API 응답 파싱·자산 선택, 임시 디렉터리에 가짜 `.app` 구조를 만들어 swap·rollback·`.bak` 정리 검증 (실제 프로세스 재시작 제외)
-- 프론트: 스토어 상태 전이는 기존 vitest 패턴으로 (배지·버튼 상태)
+- 프론트: 스토어의 update 액션은 단순 setter라 별도 테스트 없음 — 기존 vitest 스위트 + `tsc --noEmit` 게이트로 커버
 - 수동: `docs/MANUAL_TESTING.md`에 체크리스트 추가 — 구버전을 `-ldflags "-X main.version=v0.0.1"`로 로컬 빌드해 실제 최신 릴리스로 업데이트되는지, translocation 상태(quarantine 유지) 폴백, Windows 폴백
 
 ## 6. 비범위 (후속 후보)

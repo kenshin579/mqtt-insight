@@ -31,6 +31,7 @@ func download(ctx context.Context, url, dest string, progress func(int)) error {
 
 	var written int64
 	total := res.ContentLength
+	lastPct := -1 // 같은 %를 반복 emit하지 않기 위한 dedup
 	buf := make([]byte, 128*1024)
 	for {
 		n, rerr := res.Body.Read(buf)
@@ -40,7 +41,10 @@ func download(ctx context.Context, url, dest string, progress func(int)) error {
 			}
 			written += int64(n)
 			if total > 0 && progress != nil {
-				progress(int(written * 100 / total))
+				if pct := int(written * 100 / total); pct != lastPct {
+					lastPct = pct
+					progress(pct)
+				}
 			}
 		}
 		if rerr == io.EOF {
