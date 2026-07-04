@@ -57,6 +57,7 @@ export namespace config {
 	    messageOrder: string;
 	    treeHintDismissed: boolean;
 	    recToastShown: boolean;
+	    checkUpdates: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Settings(source);
@@ -72,6 +73,7 @@ export namespace config {
 	        this.messageOrder = source["messageOrder"];
 	        this.treeHintDismissed = source["treeHintDismissed"];
 	        this.recToastShown = source["recToastShown"];
+	        this.checkUpdates = source["checkUpdates"];
 	    }
 	}
 
@@ -137,6 +139,29 @@ export namespace mqtt {
 		    }
 		    return a;
 		}
+	}
+
+}
+
+export namespace update {
+	
+	export class Info {
+	    version: string;
+	    releaseURL: string;
+	    assetURL: string;
+	    canSelfUpdate: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Info(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.releaseURL = source["releaseURL"];
+	        this.assetURL = source["assetURL"];
+	        this.canSelfUpdate = source["canSelfUpdate"];
+	    }
 	}
 
 }

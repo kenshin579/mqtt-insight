@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"sync"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/kenshin579/mqtt-insight/internal/config"
 	"github.com/kenshin579/mqtt-insight/internal/mqtt"
 	"github.com/kenshin579/mqtt-insight/internal/store"
+	"github.com/kenshin579/mqtt-insight/internal/update"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -24,7 +27,9 @@ type App struct {
 	batcher    *app.Batcher
 	recorder   *store.SQLiteRecorder
 	connCancel context.CancelFunc
-	connState  string // last emitted status state (protected by mu)
+	connState  string       // last emitted status state (protected by mu)
+	updateInfo *update.Info // startup 체크 결과, nil = 최신 (protected by mu)
+	updating   bool         // ApplyUpdate 진행 중 가드 (protected by mu)
 }
 
 // NewApp creates the app, loading persisted config.
@@ -52,6 +57,12 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(a.ctx, "mqtt:tree", a.store.TreeSnapshot())
 	})
 	a.batcher.Start()
+	if exe, err := os.Executable(); err == nil {
+		update.CleanupBak(exe)
+	}
+	if version != "dev" && a.cfg.Settings.CheckUpdates {
+		go a.checkForUpdate()
+	}
 }
 
 func (a *App) shutdown(ctx context.Context) {
@@ -269,3 +280,84 @@ func (a *App) RecordedTopics() []string {
 
 // GetVersion returns the app version injected at build time ("dev" for local builds).
 func (a *App) GetVersion() string { return version }
+
+// --- In-app update (spec: docs/superpowers/specs/2026-07-05-in-app-update-design.md) ---
+
+// checkForUpdate queries GitHub once and stores/broadcasts the result.
+// 실패는 조용히 무시한다(다음 실행에서 재시도되는 셈).
+func (a *App) checkForUpdate() {
+	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Second)
+	defer cancel()
+	info, err := update.Check(ctx, update.DefaultAPIURL, version, goruntime.GOOS)
+	if err != nil || info == nil {
+		return
+	}
+	_, ok := selfUpdatePath()
+	info.CanSelfUpdate = ok && info.AssetURL != ""
+	a.mu.Lock()
+	a.updateInfo = info
+	a.mu.Unlock()
+	runtime.EventsEmit(a.ctx, "update:available", info)
+}
+
+// selfUpdatePath returns the .app bundle path when self-update is possible:
+// macOS + .app 번들 안 + translocation 아님.
+func selfUpdatePath() (string, bool) {
+	if goruntime.GOOS != "darwin" {
+		return "", false
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return "", false
+	}
+	if update.IsTranslocated(exe) {
+		return "", false
+	}
+	return update.BundlePath(exe)
+}
+
+// GetUpdateInfo returns the update found by the startup check (nil = none yet).
+// 프론트가 mount 시 pull해 update:available 이벤트와의 레이스를 없앤다.
+func (a *App) GetUpdateInfo() *update.Info {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.updateInfo
+}
+
+// ApplyUpdate downloads and installs the pending update, then restarts the
+// app. 진행률은 update:progress(0–100), 실패는 update:error 이벤트로 알린다.
+func (a *App) ApplyUpdate() {
+	a.mu.Lock()
+	info := a.updateInfo
+	if info == nil || !info.CanSelfUpdate || a.updating {
+		a.mu.Unlock()
+		return
+	}
+	a.updating = true
+	a.mu.Unlock()
+
+	go func() {
+		defer func() {
+			a.mu.Lock()
+			a.updating = false
+			a.mu.Unlock()
+		}()
+		appPath, ok := selfUpdatePath()
+		if !ok {
+			runtime.EventsEmit(a.ctx, "update:error", "cannot self-update from this install location")
+			return
+		}
+		err := update.Apply(a.ctx, info.AssetURL, appPath, func(pct int) {
+			runtime.EventsEmit(a.ctx, "update:progress", pct)
+		})
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "update:error", err.Error())
+			return
+		}
+		if err := update.Relaunch(appPath); err != nil {
+			runtime.EventsEmit(a.ctx, "update:error", err.Error())
+			return
+		}
+		runtime.Quit(a.ctx)
+	}()
+}
