@@ -9,10 +9,10 @@
 **원커맨드 (권장)** — 브로커 + retained 시드 + 앱 + 라이브 피드를 한 번에:
 
 ```bash
-./run.sh          # 전부 실행
-./run.sh down     # 전부 정리
-./run.sh app      # 코드 수정 후 앱만 재빌드+재실행
-./run.sh status   # 상태 확인
+make run                      # 전부 실행 (멱등 — 이미 떠 있는 앱/피드는 유지)
+make down                     # 전부 정리
+./scripts/dev-env.sh app      # 코드 수정 후 앱만 재빌드+재실행
+make status                   # 상태 확인
 ```
 
 세부 제어는 `scripts/dev-env.sh` 참조 (`feed` 서브커맨드, `INTERVAL`/`DURATION` 환경변수).
