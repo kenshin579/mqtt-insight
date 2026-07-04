@@ -204,6 +204,12 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .settings-footer { padding: 14px 20px 18px; border-top: 1px solid var(--line); }
 .settings-footer .btn-accent.full { width: 100%; padding: 11px; border-radius: 9px; font-size: 13px; }
 
+.settings-update { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 20px; border-top: 1px solid var(--line); }
+.settings-update-label { color: var(--dim); font-size: 12px; flex: 1; }
+.settings-update-error { flex-basis: 100%; color: var(--err); font-size: 11px; }
+.settings-update-error a { text-decoration: underline; cursor: pointer; }
+
 /* === SubscriptionChips + TreeEmptyState (B20-B23, B27) === */
 .sub-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 11px; }
 .sub-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--dim3); margin-right: 2px; }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { SaveSettings, GetVersion } from "../../wailsjs/go/main/App";
+import { SaveSettings, GetVersion, ApplyUpdate } from "../../wailsjs/go/main/App";
+import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
 import { config } from "../../wailsjs/go/models";
 import { useAppStore, type SettingsState, type Fmt } from "../store/appStore";
 import { setLang, t, type Lang } from "../lib/i18n";
@@ -14,6 +15,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const setFmt = useAppStore((s) => s.setFmt);
   const treeHintDismissed = useAppStore((s) => s.treeHintDismissed);
   const recToastShown = useAppStore((s) => s.recToastShown);
+  const updateInfo = useAppStore((s) => s.updateInfo);
+  const updateProgress = useAppStore((s) => s.updateProgress);
+  const updateError = useAppStore((s) => s.updateError);
+  const setUpdateError = useAppStore((s) => s.setUpdateError);
   const [version, setVersion] = useState("");
 
   useEscape(onClose); // C42/F28
@@ -31,6 +36,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       lang: merged.lang,
       timestampFormat: merged.timestampFormat,
       messageOrder: merged.messageOrder,
+      checkUpdates: merged.checkUpdates,
       treeHintDismissed,
       recToastShown,
     });
@@ -73,6 +79,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               value={settings.theme}
               onChange={(v) => patch({ theme: v })}
             />
+          </div>
+
+          <div className="setting-field tight">
+            <label className="row-check">
+              <input
+                type="checkbox"
+                checked={settings.checkUpdates}
+                onChange={(e) => patch({ checkUpdates: e.target.checked })}
+              />{" "}
+              {t("setCheckUpdates")}
+            </label>
           </div>
 
           <div className="sec-header">{t("secMessages")}</div>
@@ -133,6 +150,31 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             />
           </div>
         </div>
+
+        {updateInfo && (
+          <div className="settings-update">
+            <span className="settings-update-label">{t("updAvailable", { v: updateInfo.version })}</span>
+            {updateProgress !== null ? (
+              <button className="btn-accent" disabled>
+                {t("updDownloading", { pct: updateProgress })}
+              </button>
+            ) : updateInfo.canSelfUpdate ? (
+              <button className="btn-accent" onClick={() => { setUpdateError(null); ApplyUpdate(); }}>
+                {t("updRestart")}
+              </button>
+            ) : (
+              <button className="btn-accent" onClick={() => BrowserOpenURL(updateInfo.releaseURL)}>
+                {t("updOpenRelease")}
+              </button>
+            )}
+            {updateError && (
+              <div className="settings-update-error">
+                {t("updError", { msg: updateError })}{" "}
+                <a onClick={() => BrowserOpenURL(updateInfo.releaseURL)}>{t("updOpenRelease")}</a>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="settings-footer">
           <div className="settings-version">mqtt-insight {version}</div>
