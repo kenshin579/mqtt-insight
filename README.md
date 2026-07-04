@@ -2,6 +2,17 @@
 
 An open-source MQTT desktop client for IoT/embedded debugging, built with Wails + Go + React.
 
+![Topic tree, live messages and real-time charts](docs/screenshots/chart-view.png)
+
+<details>
+<summary>More screenshots</summary>
+
+**Connection launcher**
+
+![Connection profiles launcher](docs/screenshots/connection-home.png)
+
+</details>
+
 ## Install
 
 Download the latest build from [Releases](https://github.com/kenshin579/mqtt-insight/releases).
