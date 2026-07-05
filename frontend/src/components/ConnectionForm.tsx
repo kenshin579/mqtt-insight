@@ -76,7 +76,7 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
       reloadProfiles();
       onSaved();
     } catch (e) {
-      setConnectError(classifyConnectError(String(e), finalP.host));
+      setConnectError({ key: "errSaveFailed", raw: String(e) });
       setConnecting(false);
       return;
     }
