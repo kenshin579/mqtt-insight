@@ -34,7 +34,7 @@ export function QueryRecorded(arg1:string,arg2:number):Promise<Array<mqtt.Messag
 
 export function RecordedTopics():Promise<Array<string>>;
 
-export function SaveProfile(arg1:config.Profile):Promise<void>;
+export function SaveProfile(arg1:config.Profile,arg2:string):Promise<void>;
 
 export function SaveSettings(arg1:config.Settings):Promise<void>;
 

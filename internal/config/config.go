@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 )
 
@@ -80,6 +81,50 @@ func (c *Config) HasHostPort(host string, port int) bool {
 		}
 	}
 	return false
+}
+
+// AutoName is the default profile name when the user leaves it blank.
+// Must stay in sync with the same template in ConnectionForm.tsx.
+func AutoName(host string, port int) string {
+	return fmt.Sprintf("%s:%d", host, port)
+}
+
+// UpsertProfile inserts or updates a profile. prevName is the profile's
+// name when editing began ("" for a new profile); it lets a rename update
+// the original entry instead of being dropped or duplicated.
+func (c *Config) UpsertProfile(p Profile, prevName string) {
+	if prevName != "" && prevName != p.Name {
+		if i := c.indexByName(prevName); i >= 0 {
+			// rename: the new name overwrites any other profile holding it
+			if j := c.indexByName(p.Name); j >= 0 && j != i {
+				c.Profiles = append(c.Profiles[:j], c.Profiles[j+1:]...)
+				if j < i {
+					i--
+				}
+			}
+			c.Profiles[i] = p
+			return
+		}
+	}
+	if i := c.indexByName(p.Name); i >= 0 {
+		c.Profiles[i] = p
+		return
+	}
+	// auto-named quick connect must not pile up entries for a broker
+	// that is already saved under another name
+	if p.Name == AutoName(p.Host, p.Port) && c.HasHostPort(p.Host, p.Port) {
+		return
+	}
+	c.Profiles = append(c.Profiles, p)
+}
+
+func (c *Config) indexByName(name string) int {
+	for i := range c.Profiles {
+		if c.Profiles[i].Name == name {
+			return i
+		}
+	}
+	return -1
 }
 
 // Save writes config to path as indented JSON.

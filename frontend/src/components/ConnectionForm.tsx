@@ -24,6 +24,9 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
   const [tab, setTab] = useState<Tab>(editProfile ? "advanced" : "quick"); // C9
   const [p, setP] = useState<config.Profile>(() => (editProfile ? config.Profile.createFrom(editProfile) : empty()));
   const [selectedChip, setSelectedChip] = useState<string | null>(editProfile?.name ?? null);
+  // What we are editing: the profile's name when editing began ("" = new).
+  // Survives chip deselection (B47) — visual state and edit identity differ.
+  const [originName, setOriginName] = useState<string>(editProfile?.name ?? "");
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [connecting, setConnecting] = useState(false);
   const connectError = useAppStore((s) => s.connectError);
@@ -53,25 +56,36 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
   function pickChip(sp: config.Profile) {
     setP(config.Profile.createFrom(sp));
     setSelectedChip(sp.name);
+    setOriginName(sp.name);
   }
   function newChip() {
     setP(empty());
     setSelectedChip(null);
+    setOriginName("");
   }
 
   async function connect() {
-    const finalP = config.Profile.createFrom({ ...p, name: p.name.trim() || p.host }); // C11
+    // Auto-name must stay in sync with config.AutoName in Go.
+    const finalP = config.Profile.createFrom({ ...p, name: p.name.trim() || `${p.host}:${p.port}` });
     setConnectError(null);
     setConnecting(true);
+    // Save first: edits survive a failed connect (spec 2026-07-05).
+    try {
+      await SaveProfile(finalP, originName);
+      setOriginName(finalP.name); // retry must not reuse a stale prevName
+      reloadProfiles();
+      onSaved();
+    } catch (e) {
+      setConnectError({ key: "errSaveFailed", raw: String(e) });
+      setConnecting(false);
+      return;
+    }
     try {
       resetSession();
       setActiveVersion(finalP.version);
       setBroker(`${finalP.host}:${finalP.port}`);
       await Connect(finalP);
-      await SaveProfile(finalP);
-      reloadProfiles();
       onConnected?.(finalP);
-      onSaved();
       onClose();
     } catch (e) {
       setBroker("");

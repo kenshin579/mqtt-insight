@@ -87,19 +87,11 @@ func (a *App) GetProfiles() []config.Profile { return a.cfg.Profiles }
 // GetSettings returns app settings.
 func (a *App) GetSettings() config.Settings { return a.cfg.Settings }
 
-// SaveProfile upserts a profile by name and persists.
-func (a *App) SaveProfile(p config.Profile) error {
-	replaced := false
-	for i := range a.cfg.Profiles {
-		if a.cfg.Profiles[i].Name == p.Name {
-			a.cfg.Profiles[i] = p
-			replaced = true
-			break
-		}
-	}
-	if !replaced && !a.cfg.HasHostPort(p.Host, p.Port) {
-		a.cfg.Profiles = append(a.cfg.Profiles, p)
-	}
+// SaveProfile upserts a profile and persists. prevName is the profile's
+// name when editing began ("" for a new profile) so renames update the
+// original entry.
+func (a *App) SaveProfile(p config.Profile, prevName string) error {
+	a.cfg.UpsertProfile(p, prevName)
 	return config.Save(a.cfgPath, a.cfg)
 }
 
