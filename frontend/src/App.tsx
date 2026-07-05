@@ -6,6 +6,7 @@ import { config } from "../wailsjs/go/models";
 import { setLang, t } from "./lib/i18n";
 import { applyTheme } from "./lib/theme";
 import { useEscape } from "./lib/useEscape";
+import { Logo } from "./components/Logo";
 import { Welcome } from "./components/Welcome";
 import { ConnectionHome } from "./components/ConnectionHome";
 import { ConnectionBar } from "./components/ConnectionBar";
@@ -86,7 +87,7 @@ function App() {
     <div className="layout">
       <div className="titlebar">{/* A11: 점 3개·아이콘·앱명·spacer·?·⚙ — CSS는 레지스트리 A11/B1/B2 */}
         <span className="tl-dots"><i /><i /><i /></span>
-        <span className="app-icon">◈</span>
+        <span className="app-icon"><Logo size={16} /></span>
         <span className="app-name">MQTT Insight</span>
         <span className="spacer" />
         <button className="tb-btn" title={t("tourTitle")} onClick={() => setShowGuide(true)}>?</button>

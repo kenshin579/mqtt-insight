@@ -3,6 +3,7 @@ import { config } from "../../wailsjs/go/models";
 import { Connect, DeleteProfile } from "../../wailsjs/go/main/App";
 import { useAppStore } from "../store/appStore";
 import { classifyConnectError } from "../lib/connectError";
+import { Logo } from "./Logo";
 import { t } from "../lib/i18n";
 
 // Saved-profile launcher (A2): left list + right detail/connect.
@@ -57,7 +58,7 @@ export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onC
       <div className="home-right">
         {sel ? (
           <div className="home-detail">
-            <div className="app-icon lg">◈</div>
+            <div className="app-icon lg"><Logo size={52} /></div>
             <h2>{sel.name || sel.host}</h2>
             <div className="conn-str">{sel.transport}://{sel.host}:{sel.port}</div>
             <div className="info-cards">

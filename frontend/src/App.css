@@ -8,8 +8,7 @@ body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(
 .tl-dots i:nth-child(1) { background: #ff5f57; }
 .tl-dots i:nth-child(2) { background: #febc2e; }
 .tl-dots i:nth-child(3) { background: #28c840; }
-.titlebar .app-icon { width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg,#4f8cff,#7b5cff);
-  display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; margin-left: 6px; }
+.titlebar .app-icon { display: flex; margin-left: 6px; }
 .titlebar .app-name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
 .tb-btn { background: none; border: 1px solid var(--btnborder); color: var(--dim); width: 24px; height: 24px; border-radius: 6px;
   cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
@@ -80,9 +79,7 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 /* === Welcome (A1, B8-B11) === */
 .welcome { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 24px; animation: fadeIn .3s ease; }
 .welcome-inner { max-width: 640px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.hero-icon { width: 60px; height: 60px; border-radius: 15px; background: linear-gradient(135deg,#4f8cff,#7b5cff);
-  display: flex; align-items: center; justify-content: center; font-size: 30px; color: #fff;
-  box-shadow: 0 12px 30px rgba(79,140,255,.35); }
+.hero-icon { display: flex; filter: drop-shadow(0 12px 30px rgba(79,140,255,.35)); }
 .welcome h1 { font-size: 25px; font-weight: 700; letter-spacing: -.4px; margin: 4px 0 0; }
 .welcome-sub { font-size: 14px; line-height: 1.6; color: var(--dim); max-width: 470px; margin: 0; }
 .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-top: 8px; }
@@ -116,7 +113,7 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 
 .home-right { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 24px; }
 .home-detail { max-width: 440px; width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.home-detail .app-icon.lg { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg,#4f8cff,#7b5cff); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #fff; }
+.home-detail .app-icon.lg { display: flex; }
 .home-detail h2 { font-size: 21px; font-weight: 700; margin: 4px 0 0; }
 .conn-str { font-size: 13px; font-family: var(--font-mono); color: var(--dim); }
 .info-cards { display: flex; gap: 10px; width: 100%; margin-top: 6px; }

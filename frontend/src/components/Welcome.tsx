@@ -1,4 +1,5 @@
 import { t } from "../lib/i18n";
+import { Logo } from "./Logo";
 
 // Onboarding view (A1): centered hero + 3-step cards + CTA. Also used as the
 // guide overlay (Task 12 wiring) when `onClose` is provided.
@@ -6,7 +7,7 @@ export function Welcome({ onConnect, onClose }: { onConnect: () => void; onClose
   return (
     <div className="welcome">
       <div className="welcome-inner">
-        <div className="hero-icon">◈</div>
+        <div className="hero-icon"><Logo size={60} /></div>
         <h1>{t("welcomeTitle")}</h1>
         <p className="welcome-sub">{t("welcomeSub")}</p>
         <div className="steps">
