@@ -62,8 +62,8 @@ export function RecordedTopics() {
   return window['go']['main']['App']['RecordedTopics']();
 }
 
-export function SaveProfile(arg1) {
-  return window['go']['main']['App']['SaveProfile'](arg1);
+export function SaveProfile(arg1, arg2) {
+  return window['go']['main']['App']['SaveProfile'](arg1, arg2);
 }
 
 export function SaveSettings(arg1) {
