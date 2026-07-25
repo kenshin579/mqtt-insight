@@ -20,7 +20,15 @@ func MatchesFocus(topic, focus string) bool {
 
 // FilterFocus returns the messages of a batch that belong to the focused
 // subtree, preserving arrival order.
+//
+// It returns nil both when no topic is focused and when the focus matched
+// nothing. Callers only ever need to know whether there is anything to send,
+// so conflating the two is deliberate — branch on len(), never on why.
 func FilterFocus(ms []mqtt.Message, focus string) []mqtt.Message {
+	// Mirrors MatchesFocus: an empty focus means "no topic selected", so this
+	// returns nil, NOT ms. Passing the batch through here would reinstate the
+	// firehose this whole filter exists to prevent. The guard is also a fast
+	// path — with nothing selected there is no reason to walk the batch.
 	if focus == "" {
 		return nil
 	}

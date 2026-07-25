@@ -53,3 +53,11 @@ func TestFilterFocusEmptyReturnsNil(t *testing.T) {
 		t.Fatalf("empty focus must return nil, got %d", len(got))
 	}
 }
+
+func TestFilterFocusNoMatchReturnsNil(t *testing.T) {
+	// Pins nil (not an empty slice) so a later "preallocate with make" change
+	// cannot silently alter what callers marshal to JSON.
+	if got := FilterFocus([]mqtt.Message{{Topic: "z/other"}}, "a/b"); got != nil {
+		t.Fatalf("no-match filter must return nil, got %d items", len(got))
+	}
+}
