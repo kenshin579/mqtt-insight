@@ -942,12 +942,17 @@ func (a *App) treeLoop(stop <-chan struct{}) {
 			if a.store == nil {
 				continue
 			}
-			rev := a.store.TreeRevision()
-			if rev == last {
+			// Cheap gate first: an unchanged tree must not pay for a deep copy.
+			if a.store.TreeRevision() == last {
 				continue
 			}
+			// Then read snapshot and revision together, so `last` is exactly the
+			// revision of the data actually sent. Reading them apart lets an Insert
+			// land in between; snapshot-then-revision would record a revision newer
+			// than what was emitted and silently mask that update.
+			snap, rev := a.store.TreeSnapshotWithRevision()
 			last = rev
-			runtime.EventsEmit(a.ctx, "mqtt:tree", a.store.TreeSnapshot())
+			runtime.EventsEmit(a.ctx, "mqtt:tree", snap)
 		case <-stop:
 			return
 		}
