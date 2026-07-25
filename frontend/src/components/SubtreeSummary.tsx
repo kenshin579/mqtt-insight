@@ -17,13 +17,27 @@ export function SubtreeSummary({ topic }: { topic: string }) {
   const rate = useAppStore((s) => s.rate);
   const node = useMemo(() => findNode(tree, topic), [tree, topic]);
   const rows = useMemo(() => (node ? topTopics(node, TOP_N) : []), [node]);
+  const leaves = useMemo(() => (node ? leafCount(node) : 0), [node]);
 
-  if (!node) return null;
+  // A reconnect clears the backend tree while a summary may still be open, so
+  // the node can genuinely vanish. Fall back to the same empty-state chrome the
+  // rest of the pane uses rather than rendering a blank panel.
+  if (!node) {
+    return (
+      <div className="msg-empty">
+        <div className="empty-state">
+          <span className="empty-icon">←</span>
+          <div className="empty-title">{t("msgSelectTitle")}</div>
+          <div className="empty-hint">{t("msgSelectHint")}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="subtree-summary">
       <div className="ss-head">
-        <span className="ss-stat">{t("ssTopics", { n: leafCount(node) })}</span>
+        <span className="ss-stat">{t("ssTopics", { n: leaves })}</span>
         <span className="ss-stat mono">{t("ssGlobalRate", { n: rate.global.toFixed(1) })}</span>
       </div>
       <div className="ss-hint">{t("ssHint")}</div>
