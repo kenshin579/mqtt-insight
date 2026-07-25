@@ -21,7 +21,13 @@ const (
 
 // previewOf renders a short, display-safe summary of a payload for the topic tree.
 // Binary payloads render as hex; text payloads are truncated on a rune boundary so
-// the frontend never receives a split code point.
+// the frontend never receives a split code point, and malformed bytes are replaced
+// with U+FFFD rather than cutting the preview short.
+//
+// Replacement happens one byte at a time, so a truncated multi-byte rune yields two
+// U+FFFD here where a browser's TextDecoder (WHATWG maximal-subpart rule) would emit
+// one. A preview label only needs to signal "this payload has malformed bytes", so
+// the glyph count is not worth matching.
 func previewOf(payload []byte) string {
 	if len(payload) == 0 {
 		return ""
