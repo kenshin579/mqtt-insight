@@ -100,10 +100,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   // A batch carries the focus it was filtered with, so one comparison discards
   // anything produced before the user moved to another topic.
   //
-  // Not filtered against clearedAt: a live push is, by construction, newer than
-  // any clear recorded against the current selection, so checking would be dead
+  // Not filtered against clearedAt: a live push is almost always newer than any
+  // clear recorded against the current selection, so checking would be dead
   // weight on the hot path. (focusTopic applies clearedAt once, on selection,
   // where it actually matters — see there.)
+  //
+  // "Almost always" is the honest word: a message the batcher received just
+  // before the Clear but had not flushed yet arrives afterwards carrying the
+  // older timestamp, so it survives a clear it arguably predates. The window is
+  // bounded by the 50ms flush interval. The old implementation re-filtered every
+  // row on every render and so caught this; that is precisely the per-render
+  // work this change exists to remove.
   //
   // Known accepted race: SetFocus sets the backend focus and reads that topic's
   // buffered history as two separate steps, unlocked in between. A batcher flush
