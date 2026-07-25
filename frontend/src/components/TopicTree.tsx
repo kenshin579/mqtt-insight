@@ -1,22 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Tree, NodeApi } from "react-arborist";
 import { useAppStore } from "../store/appStore";
 import { matchesAny, type Sub } from "../lib/mqttMatch";
 import { t } from "../lib/i18n";
-import type { TreeNode, Message } from "../types";
+import type { TreeNode } from "../types";
 import { EnableRecording, DisableRecording, Publish, SaveSettings } from "../../wailsjs/go/main/App";
 import { mqtt, config } from "../../wailsjs/go/models";
+import { applyFocus } from "../bridge/focus";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { SubscriptionChips, TreeEmptyState } from "./SubscriptionChips";
 import { Toast } from "./Toast";
+
+/** localeCompare builds a fresh collator on every call; one shared instance
+ *  serves every comparison in the sort below. */
+const collator = new Intl.Collator();
 
 interface ArboristNode {
   id: string;
   name: string;
   isLeaf: boolean;
   count: number; // leaf = own messageCount; branch = recursive sum of descendant leaf counts (F5)
+  leaves: number; // leaf topics at or below this node — drives the stream size guard
   retained: boolean;
-  preview: string; // leaf only; backend-truncated to previewRunes (48, see internal/store/preview.go)
+  preview: string; // leaf only, backend-truncated
   dim: boolean; // leaf: unsubscribed; branch: every descendant leaf dim
   children?: ArboristNode[];
 }
@@ -61,19 +67,21 @@ function toArborist(node: TreeNode, subs: Sub[]): ArboristNode {
       name: node.name,
       isLeaf: true,
       count: node.messageCount,
+      leaves: 1,
       retained: node.retained,
       preview: node.preview ?? "",
       dim: !matchesAny(node.fullTopic, subs),
     };
   }
   const children = [...node.children!]
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => collator.compare(a.name, b.name))
     .map((c) => toArborist(c, subs));
   return {
     id: node.fullTopic,
     name: node.name,
     isLeaf: false,
     count: children.reduce((s, c) => s + c.count, 0), // recursive sum
+    leaves: children.reduce((s, c) => s + c.leaves, 0),
     retained: node.retained,
     preview: "",
     dim: children.every((c) => c.dim),
@@ -87,12 +95,39 @@ function leafCountOf(node: TreeNode | null): number {
   return node.children.reduce((s, c) => s + count(c), 0);
 }
 
+/**
+ * The non-interactive part of a tree row.
+ *
+ * Only the presentation is memoized — the wrapping <div> keeps its click and
+ * context-menu handlers inline, because those need the live NodeApi (for
+ * expand/collapse) and would defeat memoization by changing identity every
+ * render. `d` and the two booleans are stable within a tree snapshot, so the
+ * default comparator is correct here.
+ */
+const RowContent = memo(function RowContent({
+  d, isOpen, isRec,
+}: {
+  d: ArboristNode;
+  isOpen: boolean;
+  isRec: boolean;
+}) {
+  return (
+    <>
+      <span className="tt-caret">{d.isLeaf ? "" : isOpen ? "▾" : "▸"}</span>
+      {isRec && <span className="tt-recdot">●</span>}
+      <span className={"tt-name " + (d.isLeaf ? "leaf" : "branch")}>{d.name}</span>
+      {d.count > 0 && <span className="tt-count">{d.count}</span>}
+      {d.retained && <span className="tt-retained" title={t("retainedTip")}>R</span>}
+      {d.isLeaf && d.preview && <span className="tt-preview">{d.preview}</span>}
+    </>
+  );
+});
+
 export function TopicTree() {
   const tree = useAppStore((s) => s.tree);
   const subs = useAppStore((s) => s.subs);
-  const liveMessages = useAppStore((s) => s.liveMessages);
   const selectedTopic = useAppStore((s) => s.selectedTopic);
-  const selectTopic = useAppStore((s) => s.selectTopic);
+  const summaryTopic = useAppStore((s) => s.summaryTopic);
   const setPubTopic = useAppStore((s) => s.setPubTopic);
   const recording = useAppStore((s) => s.recording);
   const toggleRecordingTopic = useAppStore((s) => s.toggleRecordingTopic);
@@ -122,7 +157,7 @@ export function TopicTree() {
   const data = useMemo(() => {
     const filtered = applyFilter(tree, filter);
     if (!filtered?.children?.length) return [];
-    return [...filtered.children].sort((a, b) => a.name.localeCompare(b.name)).map((c) => toArborist(c, subs));
+    return [...filtered.children].sort((a, b) => collator.compare(a.name, b.name)).map((c) => toArborist(c, subs));
   }, [tree, filter, subs]);
 
   // Persist treeHintDismissed/recToastShown alongside the rest of the current settings (C25/A7).
@@ -146,14 +181,13 @@ export function TopicTree() {
     void persistFlags({ treeHintDismissed: true });
   }
 
+  // Selection always goes through applyFocus: it sets the backend focus, pulls
+  // the subtree history in the same round trip, and applies the size guard.
+  // Branch rows still toggle, so the collapsed-by-default tree stays navigable.
   function handleRowClick(node: NodeApi<ArboristNode>) {
-    if (!node.data.isLeaf) node.toggle();
-    const id = node.data.id;
-    let latest: Message | null = null;
-    for (let i = liveMessages.length - 1; i >= 0; i--) {
-      if (liveMessages[i].topic === id) { latest = liveMessages[i]; break; }
-    }
-    selectTopic(id, latest);
+    const d = node.data;
+    if (!d.isLeaf) node.toggle();
+    void applyFocus(d.id, d.isLeaf, d.leaves);
   }
 
   function buildMenuItems(n: ArboristNode): MenuItem[] {
@@ -217,34 +251,27 @@ export function TopicTree() {
           <TreeEmptyState />
         ) : (
           <Tree
+            key={filter ? "filtered" : "browse"}
             data={data}
-            openByDefault={true}
+            openByDefault={!!filter}
             width="100%"
             height={height || 400}
             rowHeight={26}
           >
-            {({ node, style, dragHandle }) => {
+            {({ node, style }) => {
               const d = node.data;
-              const isRec = recording.has(d.id);
-              const selected = selectedTopic === d.id;
-              const rowClass = ["tt-row", selected && "sel", d.dim && "dim"].filter(Boolean).join(" ");
+              const selected = (selectedTopic ?? summaryTopic) === d.id;
               return (
                 <div
-                  ref={dragHandle}
                   style={{ ...style, paddingLeft: 8 + node.level * 15 }}
-                  className={rowClass}
+                  className={["tt-row", selected && "sel", d.dim && "dim"].filter(Boolean).join(" ")}
                   onClick={() => handleRowClick(node)}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     setMenu({ x: e.clientX, y: e.clientY, node: d });
                   }}
                 >
-                  <span className="tt-caret">{d.isLeaf ? "" : node.isOpen ? "▾" : "▸"}</span>
-                  {isRec && <span className="tt-recdot">●</span>}
-                  <span className={"tt-name " + (d.isLeaf ? "leaf" : "branch")}>{d.name}</span>
-                  {d.count > 0 && <span className="tt-count">{d.count}</span>}
-                  {d.retained && <span className="tt-retained" title={t("retainedTip")}>R</span>}
-                  {d.isLeaf && d.preview && <span className="tt-preview">{d.preview}</span>}
+                  <RowContent d={d} isOpen={node.isOpen} isRec={recording.has(d.id)} />
                   <button
                     className="tt-menu-btn"
                     title={t("rowMenuTitle")}
