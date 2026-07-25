@@ -34,6 +34,7 @@ interface AppState {
   paused: boolean; searchOpen: boolean; searchQuery: string;
   diffOn: boolean; fmt: Fmt;
   detailMode: "message" | "chart";
+  clearedAt: Record<string, number>; // topic -> ms epoch; Clear applies to the selected topic only (F3)
   pubTopic: string; pubHint: boolean;
   treeHintDismissed: boolean; recToastShown: boolean;
   settings: SettingsState;
@@ -85,7 +86,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedTopic: null, selectedIsLeaf: true, summaryTopic: null,
   selectedMsg: null, msgSource: "live",
   paused: false, searchOpen: false, searchQuery: "",
-  diffOn: false, fmt: "json", detailMode: "message",
+  diffOn: false, fmt: "json", detailMode: "message", clearedAt: {},
   pubTopic: "", pubHint: false,
   treeHintDismissed: false, recToastShown: false,
   settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200, checkUpdates: true },
@@ -98,6 +99,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTree: (t) => set({ tree: t }),
   // A batch carries the focus it was filtered with, so one comparison discards
   // anything produced before the user moved to another topic.
+  //
+  // Not filtered against clearedAt: a live push is, by construction, newer than
+  // any clear recorded against the current selection, so checking would be dead
+  // weight on the hot path. (focusTopic applies clearedAt once, on selection,
+  // where it actually matters — see there.)
+  //
+  // Known accepted race: SetFocus sets the backend focus and reads that topic's
+  // buffered history as two separate steps, unlocked in between. A batcher flush
+  // landing in that gap can both (a) emit the message live, tagged with the new
+  // focus, and (b) already be included in the history SetFocus reads — so the
+  // same message can arrive here twice for one selection. This is deliberate:
+  // the alternative ordering (read history, then set focus) turns a rare visible
+  // duplicate into a rare silently-dropped message, which is worse for a
+  // debugging tool. Not de-duplicated here either, for the same hot-path reason
+  // as clearedAt above.
   pushMessages: (batch) => {
     const st = get();
     if (batch.focus !== (st.selectedTopic ?? "")) return;
@@ -107,8 +123,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     });
   },
   setRate: (r) => set({ rate: r }),
+  // Filters the incoming history once, against any clear previously recorded for
+  // this topic, so re-selecting a topic after Clear doesn't resurrect what was
+  // wiped from the display — the backend buffer was never told about the clear
+  // and still has it. One-time cost per selection, not per push or per render.
   focusTopic: (t, isLeaf, msgs) => {
-    const rows = msgs.slice(-MAX_FOCUS);
+    const st = get();
+    const threshold = t !== null ? st.clearedAt[t] : undefined;
+    const kept = threshold ? msgs.filter((m) => new Date(m.timestamp).getTime() > threshold) : msgs;
+    const rows = kept.slice(-MAX_FOCUS);
     set({
       selectedTopic: t, selectedIsLeaf: isLeaf, summaryTopic: null,
       focusMessages: rows, selectedMsg: rows.length ? rows[rows.length - 1] : null,
@@ -145,8 +168,23 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFmt: (f) => set({ fmt: f }),
   setDetailMode: (m) => set({ detailMode: m }),
   // Clear wipes the displayed stream only — the Go store and any recording keep
-  // everything. New pushes simply append after it.
-  clearMessages: () => set({ focusMessages: [], selectedMsg: null, dropped: 0 }),
+  // everything. New pushes simply append after it (pushMessages, unfiltered).
+  // Recording the timestamp under the *selected* topic is what stops a later
+  // re-selection of that same topic (focusTopic) from pulling the wiped
+  // messages back in from the backend's still-intact buffer.
+  //
+  // selectedTopic is null only when nothing is focused, and the Clear control
+  // is only ever shown while a topic is selected (§7.1) — so that branch is
+  // unreachable from the UI. Kept as a no-op guard rather than assuming the
+  // caller always has a topic, since the action itself doesn't take one.
+  clearMessages: () => {
+    const st = get();
+    const topic = st.selectedTopic;
+    set({
+      focusMessages: [], selectedMsg: null, dropped: 0,
+      ...(topic !== null ? { clearedAt: { ...st.clearedAt, [topic]: Date.now() } } : {}),
+    });
+  },
   setPubTopic: (t, hint) => set({ pubTopic: t, pubHint: hint }),
   dismissTreeHint: () => set({ treeHintDismissed: true }),
   markRecToastShown: () => set({ recToastShown: true }),
@@ -159,7 +197,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       tree: null, focusMessages: [], rate: { global: 0, focused: 0 }, dropped: 0,
       subs: [], selectedTopic: null, selectedIsLeaf: true, summaryTopic: null,
       selectedMsg: null, msgSource: "live", paused: false,
-      searchOpen: false, searchQuery: "",
+      searchOpen: false, searchQuery: "", clearedAt: {},
       pubTopic: "", pubHint: false, connectError: null, attempt: 0,
     }),
 }));

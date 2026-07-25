@@ -59,4 +59,35 @@ describe("appStore focus stream", () => {
     expect(after.focusMessages).toHaveLength(0);
     expect(after.summaryTopic).toBe("a");
   });
+
+  it("clearMessages records a threshold for the selected topic", () => {
+    const st = useAppStore.getState();
+    st.focusTopic("a/b", true, [msg("a/b", "2020-01-01T00:00:00.000Z")]);
+    const before = Date.now();
+    st.clearMessages();
+    const after = useAppStore.getState();
+    expect(after.focusMessages).toHaveLength(0);
+    expect(after.clearedAt["a/b"]).toBeGreaterThanOrEqual(before);
+  });
+
+  it("re-focusing the cleared topic drops history at or before the threshold and keeps what came after", () => {
+    const st = useAppStore.getState();
+    st.focusTopic("a/b", true, [msg("a/b", "2020-01-01T00:00:00.000Z")]);
+    st.clearMessages();
+    const threshold = useAppStore.getState().clearedAt["a/b"];
+    const before = new Date(threshold).toISOString(); // at the threshold: dropped
+    const after = new Date(threshold + 1).toISOString(); // after the threshold: kept
+    st.focusTopic("a/b", true, [msg("a/b", before), msg("a/b", after)]);
+    const rows = useAppStore.getState().focusMessages;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].timestamp).toBe(after);
+  });
+
+  it("a different topic is unaffected by another topic's clear threshold", () => {
+    const st = useAppStore.getState();
+    st.focusTopic("a/b", true, [msg("a/b", "2020-01-01T00:00:00.000Z")]);
+    st.clearMessages();
+    st.focusTopic("c/d", true, [msg("c/d", "2019-01-01T00:00:00.000Z")]);
+    expect(useAppStore.getState().focusMessages).toHaveLength(1);
+  });
 });
