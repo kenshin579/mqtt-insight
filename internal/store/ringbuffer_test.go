@@ -143,3 +143,24 @@ func TestGetSubtreeWithinTopicArrivalOrderBeatsTopicTiebreak(t *testing.T) {
 		t.Fatalf("want insertion order first,second (same topic ties on both sort keys), got %s,%s", got[0].Payload, got[1].Payload)
 	}
 }
+
+func TestGetSubtreeRejectsNonPositiveLimit(t *testing.T) {
+	rb := NewRingBuffer(10)
+	rb.Append("a/b", mqtt.Message{Topic: "a/b", Timestamp: time.Unix(1, 0)})
+	for _, limit := range []int{0, -1} {
+		if got := rb.GetSubtree("a", limit); got != nil {
+			t.Fatalf("limit %d must return nil, got %d messages", limit, len(got))
+		}
+	}
+}
+
+func TestGetSubtreeExactlyAtLimitIsNotTrimmed(t *testing.T) {
+	rb := NewRingBuffer(10)
+	for i := 0; i < 3; i++ {
+		rb.Append("t/a", mqtt.Message{Topic: "t/a", Payload: []byte{byte('0' + i)}, Timestamp: time.Unix(int64(i), 0)})
+	}
+	got := rb.GetSubtree("t", 3)
+	if len(got) != 3 || string(got[0].Payload) != "0" || string(got[2].Payload) != "2" {
+		t.Fatalf("want all 3 when count equals limit, got %v", got)
+	}
+}

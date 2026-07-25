@@ -93,10 +93,11 @@ func (r *RingBuffer) GetSubtree(prefix string, limit int) []mqtt.Message {
 	if prefix == "" || limit < 1 {
 		return nil
 	}
+	sep := prefix + "/"
 	r.mu.RLock()
 	var out []mqtt.Message
 	for topic, buf := range r.byTopic {
-		if topic != prefix && !strings.HasPrefix(topic, prefix+"/") {
+		if topic != prefix && !strings.HasPrefix(topic, sep) {
 			continue
 		}
 		out = append(out, buf...)
