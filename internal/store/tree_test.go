@@ -33,8 +33,29 @@ func TestTreeInsertUpdatesLeafStats(t *testing.T) {
 	if leaf.MessageCount != 2 {
 		t.Fatalf("want count 2, got %d", leaf.MessageCount)
 	}
-	if string(leaf.LastPayload) != "2" {
-		t.Fatalf("want last payload 2, got %s", leaf.LastPayload)
+	if leaf.Preview != "2" {
+		t.Fatalf("want last preview 2, got %q", leaf.Preview)
+	}
+}
+
+func TestTreeRevisionAdvancesOnInsertOnly(t *testing.T) {
+	tr := NewTree()
+	start := tr.Revision()
+
+	tr.Insert(mqtt.Message{Topic: "a/b", Payload: []byte("1"), Timestamp: time.Unix(1, 0)})
+	afterInsert := tr.Revision()
+	if afterInsert == start {
+		t.Fatal("Insert must advance the revision")
+	}
+
+	tr.Snapshot()
+	if tr.Revision() != afterInsert {
+		t.Fatal("Snapshot must not advance the revision")
+	}
+
+	tr.Clear()
+	if tr.Revision() == afterInsert {
+		t.Fatal("Clear must advance the revision so the emptied tree is emitted")
 	}
 }
 

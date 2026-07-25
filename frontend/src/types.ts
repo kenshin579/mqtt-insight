@@ -15,7 +15,7 @@ export interface TreeNode {
   fullTopic: string;
   children?: TreeNode[];
   messageCount: number;
-  lastPayload?: string; // base64
+  preview?: string; // backend-truncated display string (see internal/store/preview.go)
   lastSeen: string;
   retained: boolean;
 }

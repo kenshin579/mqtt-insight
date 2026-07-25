@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Tree, NodeApi } from "react-arborist";
 import { useAppStore } from "../store/appStore";
-import { bytesToString } from "../lib/payload";
 import { matchesAny, type Sub } from "../lib/mqttMatch";
 import { t } from "../lib/i18n";
 import type { TreeNode, Message } from "../types";
@@ -63,7 +62,7 @@ function toArborist(node: TreeNode, subs: Sub[]): ArboristNode {
       isLeaf: true,
       count: node.messageCount,
       retained: node.retained,
-      preview: node.lastPayload ? bytesToString(node.lastPayload).slice(0, 34) : "",
+      preview: node.preview ?? "",
       dim: !matchesAny(node.fullTopic, subs),
     };
   }

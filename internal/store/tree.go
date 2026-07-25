@@ -14,7 +14,7 @@ type Node struct {
 	FullTopic    string    `json:"fullTopic"`
 	Children     []*Node   `json:"children,omitempty"`
 	MessageCount int       `json:"messageCount"`
-	LastPayload  []byte    `json:"lastPayload,omitempty"`
+	Preview      string    `json:"preview,omitempty"`
 	LastSeen     time.Time `json:"lastSeen"`
 	Retained     bool      `json:"retained"`
 
@@ -23,8 +23,9 @@ type Node struct {
 
 // Tree is a thread-safe aggregating topic tree.
 type Tree struct {
-	mu   sync.RWMutex
-	root *Node
+	mu       sync.RWMutex
+	root     *Node
+	revision uint64
 }
 
 // NewTree creates an empty topic tree.
@@ -54,9 +55,10 @@ func (t *Tree) Insert(m mqtt.Message) {
 		cur = child
 	}
 	cur.MessageCount++
-	cur.LastPayload = append([]byte(nil), m.Payload...)
+	cur.Preview = previewOf(m.Payload)
 	cur.LastSeen = m.Timestamp
 	cur.Retained = m.Retained
+	t.revision++
 }
 
 // Snapshot returns a deep copy of the tree safe to serialize/send to the frontend.
@@ -69,7 +71,7 @@ func (t *Tree) Snapshot() *Node {
 func copyNode(n *Node) *Node {
 	cp := &Node{
 		Name: n.Name, FullTopic: n.FullTopic, MessageCount: n.MessageCount,
-		LastPayload: append([]byte(nil), n.LastPayload...), LastSeen: n.LastSeen, Retained: n.Retained,
+		Preview: n.Preview, LastSeen: n.LastSeen, Retained: n.Retained,
 	}
 	for _, c := range n.Children {
 		cp.Children = append(cp.Children, copyNode(c))
@@ -82,4 +84,13 @@ func (t *Tree) Clear() {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.root = &Node{Name: "", childIndex: map[string]*Node{}}
+	t.revision++
+}
+
+// Revision increments on every mutation. The emitter compares it against the
+// last emitted value so an unchanged tree is never re-serialized.
+func (t *Tree) Revision() uint64 {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.revision
 }
