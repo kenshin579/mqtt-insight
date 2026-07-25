@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Message, TreeNode, Status, UpdateInfo } from "../types";
+import type { Message, TreeNode, Status, UpdateInfo, FocusBatch, RateEvent } from "../types";
 import type { Sub } from "../lib/mqttMatch";
 import type { ConnectError } from "../lib/connectError";
 import type { Lang } from "../lib/i18n";
@@ -20,15 +20,20 @@ interface AppState {
   connectError: ConnectError | null;
   activeVersion: string; // "5.0" | "3.1.1" — 연결에 쓴 프로필의 버전 (B40 비활성 판단)
   // data
-  tree: TreeNode | null; liveMessages: Message[];
+  tree: TreeNode | null;
+  focusMessages: Message[]; // messages of the focused subtree only
+  rate: RateEvent;          // backend-computed msg/s
+  dropped: number;          // messages the backend skipped to hold the emit cap
   subs: Sub[]; recording: Set<string>;
-  selectedTopic: string | null; selectedMsg: Message | null;
+  selectedTopic: string | null;  // streaming selection (also the backend focus)
+  selectedIsLeaf: boolean;       // false = subtree selection, so rows show their topic
+  summaryTopic: string | null;   // selection too wide to stream — summary shown instead
+  selectedMsg: Message | null;
   msgSource: MsgSource;
   // ui
   paused: boolean; searchOpen: boolean; searchQuery: string;
   diffOn: boolean; fmt: Fmt;
   detailMode: "message" | "chart";
-  clearedAt: Record<string, number>; // topic -> ms epoch; "" = all-topics baseline (F3)
   pubTopic: string; pubHint: boolean;
   treeHintDismissed: boolean; recToastShown: boolean;
   settings: SettingsState;
@@ -42,10 +47,12 @@ interface AppState {
   setConnectError: (e: ConnectError | null) => void;
   setActiveVersion: (v: string) => void;
   setTree: (t: TreeNode) => void;
-  pushMessages: (ms: Message[]) => void;
+  pushMessages: (batch: FocusBatch) => void;
+  setRate: (r: RateEvent) => void;
+  focusTopic: (t: string | null, isLeaf: boolean, msgs: Message[]) => void;
+  showSubtreeSummary: (t: string) => void;
   addSub: (pattern: string, qos: number) => boolean; // false = 중복/빈값
   removeSub: (pattern: string) => void;
-  selectTopic: (t: string | null, latest?: Message | null) => void;
   selectMsg: (m: Message | null) => void;
   setMsgSource: (s: MsgSource) => void;
   setRecordingTopics: (ts: string[]) => void;
@@ -55,7 +62,7 @@ interface AppState {
   toggleDiff: () => void;
   setFmt: (f: Fmt) => void;
   setDetailMode: (m: "message" | "chart") => void;
-  clearMessages: (topic: string | null) => void; // F3
+  clearMessages: () => void; // F3
   setPubTopic: (t: string, hint: boolean) => void;
   dismissTreeHint: () => void;
   markRecToastShown: () => void;
@@ -66,15 +73,19 @@ interface AppState {
   resetSession: () => void; // 새 연결 시(C4/C12): 데이터·구독·선택 초기화
 }
 
-const MAX_LIVE = 500;
+/** Ring cap for the focused stream. Display bound — unrelated to settings.ringBufferSize,
+ *  which is how many messages the Go store keeps per topic. */
+export const MAX_FOCUS = 500;
 
 export const useAppStore = create<AppState>((set, get) => ({
   status: "disconnected", broker: "", attempt: 0,
   connectError: null, activeVersion: "5.0",
-  tree: null, liveMessages: [], subs: [], recording: new Set<string>(),
-  selectedTopic: null, selectedMsg: null, msgSource: "live",
+  tree: null, focusMessages: [], rate: { global: 0, focused: 0 }, dropped: 0,
+  subs: [], recording: new Set<string>(),
+  selectedTopic: null, selectedIsLeaf: true, summaryTopic: null,
+  selectedMsg: null, msgSource: "live",
   paused: false, searchOpen: false, searchQuery: "",
-  diffOn: false, fmt: "json", detailMode: "message", clearedAt: {},
+  diffOn: false, fmt: "json", detailMode: "message",
   pubTopic: "", pubHint: false,
   treeHintDismissed: false, recToastShown: false,
   settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200, checkUpdates: true },
@@ -85,9 +96,31 @@ export const useAppStore = create<AppState>((set, get) => ({
   setConnectError: (e) => set({ connectError: e }),
   setActiveVersion: (v) => set({ activeVersion: v }),
   setTree: (t) => set({ tree: t }),
-  // F24: paused여도 수신은 계속 쌓는다(표시는 컴포넌트가 pause 시점 스냅샷). 단순화:
-  // liveMessages는 항상 갱신하고, MessageList가 paused일 때 이전 rows를 유지한다.
-  pushMessages: (ms) => set({ liveMessages: [...get().liveMessages, ...ms].slice(-MAX_LIVE) }),
+  // A batch carries the focus it was filtered with, so one comparison discards
+  // anything produced before the user moved to another topic.
+  pushMessages: (batch) => {
+    const st = get();
+    if (batch.focus !== (st.selectedTopic ?? "")) return;
+    set({
+      focusMessages: [...st.focusMessages, ...batch.messages].slice(-MAX_FOCUS),
+      dropped: st.dropped + batch.dropped,
+    });
+  },
+  setRate: (r) => set({ rate: r }),
+  focusTopic: (t, isLeaf, msgs) => {
+    const rows = msgs.slice(-MAX_FOCUS);
+    set({
+      selectedTopic: t, selectedIsLeaf: isLeaf, summaryTopic: null,
+      focusMessages: rows, selectedMsg: rows.length ? rows[rows.length - 1] : null,
+      dropped: 0, msgSource: "live", paused: false,
+      ...(t ? { pubTopic: t, pubHint: true } : {}),
+    });
+  },
+  showSubtreeSummary: (t) =>
+    set({
+      summaryTopic: t, selectedTopic: null, selectedIsLeaf: true,
+      focusMessages: [], selectedMsg: null, dropped: 0, msgSource: "live", paused: false,
+    }),
   addSub: (pattern, qos) => {
     const p = pattern.trim();
     if (!p || get().subs.some((s) => s.pattern === p)) return false;
@@ -95,8 +128,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     return true;
   },
   removeSub: (pattern) => set({ subs: get().subs.filter((s) => s.pattern !== pattern) }),
-  selectTopic: (t, latest = null) =>
-    set({ selectedTopic: t, selectedMsg: latest, msgSource: "live", ...(t ? { pubTopic: t, pubHint: true } : {}) }),
   selectMsg: (m) => set({ selectedMsg: m }),
   setMsgSource: (s) => set({ msgSource: s }),
   setRecordingTopics: (ts) => set({ recording: new Set(ts) }),
@@ -113,15 +144,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   setFmt: (f) => set({ fmt: f }),
   setDetailMode: (m) => set({ detailMode: m }),
-  // F3: clears the display only — History/QueryRecorded stay backend-owned, rows filter by clearedAt.
-  clearMessages: (topic) => {
-    const key = topic ?? "";
-    set({
-      clearedAt: { ...get().clearedAt, [key]: Date.now() },
-      selectedMsg: null,
-      ...(topic === null ? { liveMessages: [] } : {}),
-    });
-  },
+  // Clear wipes the displayed stream only — the Go store and any recording keep
+  // everything. New pushes simply append after it.
+  clearMessages: () => set({ focusMessages: [], selectedMsg: null, dropped: 0 }),
   setPubTopic: (t, hint) => set({ pubTopic: t, pubHint: hint }),
   dismissTreeHint: () => set({ treeHintDismissed: true }),
   markRecToastShown: () => set({ recToastShown: true }),
@@ -131,8 +156,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   setUpdateError: (e) => set({ updateError: e }),
   resetSession: () =>
     set({
-      tree: null, liveMessages: [], subs: [], selectedTopic: null, selectedMsg: null,
-      msgSource: "live", paused: false, searchOpen: false, searchQuery: "",
-      pubTopic: "", pubHint: false, connectError: null, attempt: 0, clearedAt: {},
+      tree: null, focusMessages: [], rate: { global: 0, focused: 0 }, dropped: 0,
+      subs: [], selectedTopic: null, selectedIsLeaf: true, summaryTopic: null,
+      selectedMsg: null, msgSource: "live", paused: false,
+      searchOpen: false, searchQuery: "",
+      pubTopic: "", pubHint: false, connectError: null, attempt: 0,
     }),
 }));

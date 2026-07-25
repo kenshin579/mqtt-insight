@@ -30,3 +30,16 @@ export interface UpdateInfo {
   assetURL: string;
   canSelfUpdate: boolean;
 }
+
+/** mqtt:messages payload — messages already scoped to `focus` by the backend. */
+export interface FocusBatch {
+  focus: string;
+  messages: Message[];
+  dropped: number;
+}
+
+/** mqtt:rate payload — backend-computed messages/second over a 5s window. */
+export interface RateEvent {
+  global: number;
+  focused: number;
+}
