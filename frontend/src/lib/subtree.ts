@@ -7,13 +7,24 @@ import type { TreeNode } from "../types";
  */
 export const STREAM_LEAF_THRESHOLD = 20;
 
-/** Number of leaf topics at or below a node (a leaf counts as one). */
+/**
+ * Number of leaf topics at or below a node (a leaf counts as one).
+ *
+ * A branch that happens to have zero children also counts as one: Go tags the
+ * field `children,omitempty`, so an empty branch and a leaf arrive identically
+ * over the wire and cannot be told apart here.
+ */
 export function leafCount(node: TreeNode): number {
   if (!node.children || node.children.length === 0) return 1;
   return node.children.reduce((sum, c) => sum + leafCount(c), 0);
 }
 
-/** Find a node by its full topic path. Returns null when absent. */
+/**
+ * Find a *descendant* by its full topic path. Returns null when absent.
+ *
+ * The root argument itself is never matched — callers pass the synthetic root
+ * of the store's tree, whose fullTopic is not a real topic.
+ */
 export function findNode(root: TreeNode | null, fullTopic: string): TreeNode | null {
   if (!root) return null;
   const stack: TreeNode[] = root.children ? [...root.children] : [];
@@ -43,5 +54,8 @@ export function topTopics(node: TreeNode, limit: number): TopTopic[] {
   };
   walk(node);
   out.sort((a, b) => b.count - a.count);
-  return out.slice(0, limit);
+  // Clamp: a bare slice(0, negative) would return all but the last |limit|
+  // entries — nearly the whole unfiltered list, which is the exact noise this
+  // module exists to keep off the screen.
+  return out.slice(0, Math.max(0, limit));
 }

@@ -15,7 +15,7 @@ const tree: TreeNode = branch("", [
   branch("arc", [
     branch("arc/robot", [
       branch("arc/robot/r1", [leaf("arc/robot/r1/report", 5), leaf("arc/robot/r1/bb", 3)]),
-      branch("arc/robot/r2", [leaf("arc/robot/r2/report", 9)]),
+      branch("arc/robot/r2", [leaf("arc/robot/r2/report", 9, '{"v":1}')]),
     ]),
   ]),
 ]);
@@ -34,8 +34,18 @@ describe("subtree", () => {
     expect(findNode(null, "arc")).toBeNull();
   });
   it("ranks leaves by message count and applies the limit", () => {
-    const top = topTopics(findNode(tree, "arc") as TreeNode, 2);
-    expect(top.map((r) => r.topic)).toEqual(["arc/robot/r2/report", "arc/robot/r1/report"]);
+    // Asserting whole rows, not just topics: count and the preview fallback
+    // would otherwise be free to drift without failing anything.
+    expect(topTopics(findNode(tree, "arc") as TreeNode, 2)).toEqual([
+      { topic: "arc/robot/r2/report", count: 9, preview: '{"v":1}' },
+      { topic: "arc/robot/r1/report", count: 5, preview: "" },
+    ]);
+  });
+  it("clamps a non-positive limit to an empty list", () => {
+    // slice(0, -1) would otherwise return nearly the whole list.
+    const arc = findNode(tree, "arc") as TreeNode;
+    expect(topTopics(arc, 0)).toEqual([]);
+    expect(topTopics(arc, -1)).toEqual([]);
   });
   it("exposes the guard threshold", () => {
     expect(STREAM_LEAF_THRESHOLD).toBe(20);
