@@ -74,6 +74,17 @@ func (r *RingBuffer) Clear() {
 // chronological slice, returning at most the newest `limit` messages. The "/"
 // separator is enforced so "a/robot" does not match "a/robot2".
 //
+// Ordering contract: messages are sorted by Timestamp first. Timestamps that
+// tie (plausible under a 50ms batcher window across many topics) are broken
+// by Topic name. This is deliberate, not incidental: the merge is built by
+// ranging over the byTopic map, whose iteration order Go randomizes on every
+// call, so within-topic order (real arrival order, worth preserving via a
+// stable sort) would otherwise be interleaved with an arbitrary, call-to-call
+// unstable ordering across topics. Breaking timestamp ties by topic name
+// makes the result deterministic across repeated calls with no writes in
+// between; two same-topic messages that also tie on Topic keep their arrival
+// order because sort.SliceStable never reorders elements equal on both keys.
+//
 // Message structs are shallow-copied under the lock; payload byte slices are
 // deep-copied only for the messages actually returned. That is safe because
 // Append never writes into an already-stored payload array — it allocates a
@@ -92,7 +103,12 @@ func (r *RingBuffer) GetSubtree(prefix string, limit int) []mqtt.Message {
 	}
 	r.mu.RUnlock()
 
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Timestamp.Before(out[j].Timestamp) })
+	sort.SliceStable(out, func(i, j int) bool {
+		if !out[i].Timestamp.Equal(out[j].Timestamp) {
+			return out[i].Timestamp.Before(out[j].Timestamp)
+		}
+		return out[i].Topic < out[j].Topic
+	})
 	if len(out) > limit {
 		out = out[len(out)-limit:]
 	}

@@ -109,3 +109,37 @@ func TestGetSubtreeIsolatesPayloadBytes(t *testing.T) {
 		t.Fatalf("store corrupted by mutating returned copy: got %s", got[0].Payload)
 	}
 }
+
+func TestGetSubtreeOrderIsDeterministicOnTimestampTies(t *testing.T) {
+	ts := time.Unix(1, 0)
+	rb := NewRingBuffer(10)
+	for _, topic := range []string{"r/c", "r/a", "r/b"} {
+		rb.Append(topic, mqtt.Message{Topic: topic, Timestamp: ts})
+	}
+	want := []string{"r/a", "r/b", "r/c"}
+	// Repeat: Go randomizes map iteration order per range, so a single pass can
+	// pass by luck. Several passes must all agree.
+	for pass := 0; pass < 20; pass++ {
+		got := rb.GetSubtree("r", 10)
+		for i := range want {
+			if got[i].Topic != want[i] {
+				t.Fatalf("pass %d: want %v, got topic %q at index %d", pass, want, got[i].Topic, i)
+			}
+		}
+	}
+}
+
+func TestGetSubtreeWithinTopicArrivalOrderBeatsTopicTiebreak(t *testing.T) {
+	ts := time.Unix(1, 0)
+	rb := NewRingBuffer(10)
+	rb.Append("r/a", mqtt.Message{Topic: "r/a", Payload: []byte("first"), Timestamp: ts})
+	rb.Append("r/a", mqtt.Message{Topic: "r/a", Payload: []byte("second"), Timestamp: ts})
+
+	got := rb.GetSubtree("r", 10)
+	if len(got) != 2 {
+		t.Fatalf("want 2 messages, got %d", len(got))
+	}
+	if string(got[0].Payload) != "first" || string(got[1].Payload) != "second" {
+		t.Fatalf("want insertion order first,second (same topic ties on both sort keys), got %s,%s", got[0].Payload, got[1].Payload)
+	}
+}
