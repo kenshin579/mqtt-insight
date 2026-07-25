@@ -104,6 +104,10 @@ export const DICT = {
     updOpenRelease: '릴리스 페이지 열기',
     updDownloading: '다운로드 중… {pct}%',
     updError: '업데이트 실패: {msg}',
+    headerNone: '선택된 토픽 없음',
+    droppedRows: '표시 한도 초과 — {n}건 생략',
+    ssTopics: '{n}개 토픽',
+    ssHint: '토픽이 많아 실시간 스트림을 표시하지 않아요. 아래에서 토픽을 고르거나 트리를 더 펼쳐 보세요.',
   },
   en: {
     tourTitle: 'Restart getting-started guide', setTitle: 'Settings',
@@ -197,5 +201,9 @@ export const DICT = {
     updOpenRelease: 'Open release page',
     updDownloading: 'Downloading… {pct}%',
     updError: 'Update failed: {msg}',
+    headerNone: 'No topic selected',
+    droppedRows: 'display cap reached — {n} skipped',
+    ssTopics: '{n} topics',
+    ssHint: 'Too many topics to stream. Pick one below, or expand the tree further.',
   },
 } as const;
