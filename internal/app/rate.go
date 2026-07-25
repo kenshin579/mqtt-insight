@@ -13,6 +13,16 @@ const rateBuckets = 5
 // Counting integers here (rather than re-scanning a message buffer in the UI)
 // is also what removes the old display cap: the frontend buffer held ~1s of
 // traffic while the window was 5s, so the shown rate could never exceed 100.
+//
+// Time comes entirely from the caller's ticker, not from a clock read. If the
+// ticker stalls — GC pause, or the machine sleeping — one bucket absorbs
+// several real seconds while Rates still divides by the nominal window, so the
+// figure overstates until the ring rotates clear. It is bounded and
+// self-correcting; a caller that can detect a long gap should prefer Reset over
+// a single Advance.
+//
+// Add* expect a non-negative count; a negative one would drive a bucket below
+// zero and surface as a negative rate.
 type RateCounter struct {
 	mu      sync.Mutex
 	global  [rateBuckets]int
@@ -26,15 +36,15 @@ func NewRateCounter() *RateCounter { return &RateCounter{} }
 // AddGlobal records n messages received from the broker.
 func (c *RateCounter) AddGlobal(n int) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.global[c.cursor] += n
-	c.mu.Unlock()
 }
 
 // AddFocused records n messages that passed the focus filter.
 func (c *RateCounter) AddFocused(n int) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.focused[c.cursor] += n
-	c.mu.Unlock()
 }
 
 // Advance rotates to the next bucket, clearing the one it lands on.

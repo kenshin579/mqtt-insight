@@ -74,3 +74,34 @@ func TestRateCounterReset(t *testing.T) {
 		t.Fatalf("want 0/0 after reset, got %v/%v", g, f)
 	}
 }
+
+func TestRateCounterAccumulatesWithinBucket(t *testing.T) {
+	// The batcher flushes every 50ms, so Add* is called ~20 times into the same
+	// bucket per second. Pins += rather than =.
+	c := NewRateCounter()
+	c.AddGlobal(3)
+	c.AddGlobal(4)
+	c.AddGlobal(2)
+	c.AddFocused(1)
+	c.AddFocused(4)
+	g, f := c.Rates()
+	if g != 9.0/rateBuckets {
+		t.Fatalf("want accumulated 9 over the window, got %v", g)
+	}
+	if f != 5.0/rateBuckets {
+		t.Fatalf("want accumulated 5 over the window, got %v", f)
+	}
+}
+
+func TestRateCounterAdvanceClearsFocusedToo(t *testing.T) {
+	// The value tests discard the focused return, so without this a dropped
+	// `c.focused[c.cursor] = 0` in Advance would survive the whole suite.
+	c := NewRateCounter()
+	c.AddFocused(500)
+	for i := 0; i < rateBuckets; i++ {
+		c.Advance()
+	}
+	if _, f := c.Rates(); f != 0 {
+		t.Fatalf("want focused 0 after the window rotates fully, got %v", f)
+	}
+}
