@@ -127,7 +127,7 @@ export function MessageList() {
         <span className={"toolbar-topic mono" + (selectedTopic || summaryTopic ? " accent" : " dim")}>
           {selectedTopic || summaryTopic || t("headerNone")}
         </span>
-        {shownRate > 0 && <span className="msg-rate mono">{shownRate.toFixed(1)} msg/s</span>}
+        {shownRate > 0 && !summaryTopic && <span className="msg-rate mono">{shownRate.toFixed(1)} msg/s</span>}
         {dropped > 0 && <span className="msg-drop mono">{t("droppedRows", { n: dropped })}</span>}
         {isRecordable && (
           <>

@@ -143,6 +143,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       summaryTopic: t, selectedTopic: null, selectedIsLeaf: true,
       focusMessages: [], selectedMsg: null, dropped: 0, msgSource: "live", paused: false,
+      searchOpen: false, searchQuery: "",
     }),
   addSub: (pattern, qos) => {
     const p = pattern.trim();

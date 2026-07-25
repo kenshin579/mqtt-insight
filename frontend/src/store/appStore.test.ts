@@ -60,6 +60,16 @@ describe("appStore focus stream", () => {
     expect(after.summaryTopic).toBe("a");
   });
 
+  it("showSubtreeSummary clears open search state", () => {
+    const st = useAppStore.getState();
+    st.focusTopic("a/b", true, [msg("a/b", "1")]);
+    st.setSearch(true, "needle");
+    st.showSubtreeSummary("a");
+    const after = useAppStore.getState();
+    expect(after.searchOpen).toBe(false);
+    expect(after.searchQuery).toBe("");
+  });
+
   it("clearMessages records a threshold for the selected topic", () => {
     const st = useAppStore.getState();
     st.focusTopic("a/b", true, [msg("a/b", "2020-01-01T00:00:00.000Z")]);

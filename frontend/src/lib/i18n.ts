@@ -108,6 +108,7 @@ export const DICT = {
     droppedRows: '표시 한도 초과 — {n}건 생략',
     ssTopics: '{n}개 토픽',
     ssHint: '토픽이 많아 실시간 스트림을 표시하지 않아요. 아래에서 토픽을 고르거나 트리를 더 펼쳐 보세요.',
+    ssGlobalRate: '브로커 전체 {n} msg/s',
   },
   en: {
     tourTitle: 'Restart getting-started guide', setTitle: 'Settings',
@@ -205,5 +206,6 @@ export const DICT = {
     droppedRows: 'display cap reached — {n} skipped',
     ssTopics: '{n} topics',
     ssHint: 'Too many topics to stream. Pick one below, or expand the tree further.',
+    ssGlobalRate: '{n} msg/s across the broker',
   },
 } as const;
