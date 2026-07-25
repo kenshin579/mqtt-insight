@@ -172,6 +172,12 @@ button { background: var(--accent); color: #fff; border: 0; padding: 4px 12px; b
 .btn-connect { flex: 1; background: var(--accent); color: #fff; border: 0; padding: 11px; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .btn-connect:disabled { opacity: .6; cursor: default; }
 
+/* === Confirm dialog (F27) — window.confirm 대체 === */
+.confirm-modal { width: 360px; max-width: 90vw; background: var(--modal); border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.5); padding: 20px 22px 18px; gap: 14px; }
+.confirm-msg { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--text); }
+.confirm-modal .modal-footer { justify-content: flex-end; margin-top: 0; }
+
 /* === SettingsModal (A5, B53-B57) === */
 .settings-modal { width: 480px; max-width: 92vw; max-height: 90vh; overflow: auto; background: var(--modal);
   border-radius: 14px; box-shadow: 0 30px 80px rgba(0,0,0,.5); padding: 0; display: block; }

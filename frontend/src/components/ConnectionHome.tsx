@@ -5,6 +5,7 @@ import { useAppStore } from "../store/appStore";
 import { classifyConnectError } from "../lib/connectError";
 import { Logo } from "./Logo";
 import { t } from "../lib/i18n";
+import { useEscape } from "../lib/useEscape";
 
 // Saved-profile launcher (A2): left list + right detail/connect.
 export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onConnected }: {
@@ -12,9 +13,11 @@ export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onC
   onConnected?: (p: config.Profile) => void;
 }) {
   const [selected, setSelected] = useState<string>(profiles[0]?.name ?? "");
+  const [pendingDelete, setPendingDelete] = useState<config.Profile | null>(null);
   const connectError = useAppStore((s) => s.connectError);
   const setConnectError = useAppStore((s) => s.setConnectError);
   const st = useAppStore.getState();
+  useEscape(() => setPendingDelete(null)); // C42/F28: 다이얼로그가 없으면 no-op
   useEffect(() => { if (!profiles.find((p) => p.name === selected)) setSelected(profiles[0]?.name ?? ""); }, [profiles]);
   const sel = profiles.find((p) => p.name === selected) ?? null;
 
@@ -31,9 +34,11 @@ export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onC
       setConnectError(classifyConnectError(String(e), p.host));
     }
   }
+  // F27: 삭제 확인은 앱 내부 다이얼로그로 받는다. window.confirm은 macOS의
+  // WKWebView(Wails)에 구현이 없어 다이얼로그 없이 항상 false를 반환한다.
   async function del(p: config.Profile) {
-    if (!window.confirm(t("deleteConfirm", { name: p.name || p.host }))) return; // F27
     await DeleteProfile(p.name);
+    setPendingDelete(null);
     onProfilesChanged();
   }
 
@@ -71,7 +76,7 @@ export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onC
             )}
             <div className="home-actions">
               <button className="btn-outline" onClick={() => onEdit(sel)}>{t("homeEdit")}</button>
-              <button className="btn-outline danger" onClick={() => del(sel)}>{t("homeDelete")}</button>
+              <button className="btn-outline danger" onClick={() => setPendingDelete(sel)}>{t("homeDelete")}</button>
             </div>
           </div>
         ) : (
@@ -80,6 +85,20 @@ export function ConnectionHome({ profiles, onNew, onEdit, onProfilesChanged, onC
             <div className="empty-hint">{t("homeSelectHint")}</div></div>
         )}
       </div>
+      {pendingDelete && (
+        <div className="modal-backdrop" onClick={() => setPendingDelete(null)}>
+          <div className="modal confirm-modal" role="dialog" aria-modal="true"
+            onClick={(e) => e.stopPropagation()}>
+            <p className="confirm-msg">
+              {t("deleteConfirm", { name: pendingDelete.name || pendingDelete.host })}
+            </p>
+            <div className="modal-footer">
+              <button className="btn-outline" onClick={() => setPendingDelete(null)}>{t("btnCancel")}</button>
+              <button className="btn-outline danger" onClick={() => del(pendingDelete)}>{t("homeDelete")}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
