@@ -7,6 +7,7 @@ import type { TreeNode } from "../types";
 import { EnableRecording, DisableRecording, Publish, SaveSettings } from "../../wailsjs/go/main/App";
 import { mqtt, config } from "../../wailsjs/go/models";
 import { applyFocus } from "../bridge/focus";
+import { findNode, leafCount as countLeaves } from "../lib/subtree";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { SubscriptionChips, TreeEmptyState } from "./SubscriptionChips";
 import { Toast } from "./Toast";
@@ -20,7 +21,6 @@ interface ArboristNode {
   name: string;
   isLeaf: boolean;
   count: number; // leaf = own messageCount; branch = recursive sum of descendant leaf counts (F5)
-  leaves: number; // leaf topics at or below this node — drives the stream size guard
   retained: boolean;
   preview: string; // leaf only, backend-truncated
   dim: boolean; // leaf: unsubscribed; branch: every descendant leaf dim
@@ -67,7 +67,6 @@ function toArborist(node: TreeNode, subs: Sub[]): ArboristNode {
       name: node.name,
       isLeaf: true,
       count: node.messageCount,
-      leaves: 1,
       retained: node.retained,
       preview: node.preview ?? "",
       dim: !matchesAny(node.fullTopic, subs),
@@ -81,7 +80,6 @@ function toArborist(node: TreeNode, subs: Sub[]): ArboristNode {
     name: node.name,
     isLeaf: false,
     count: children.reduce((s, c) => s + c.count, 0), // recursive sum
-    leaves: children.reduce((s, c) => s + c.leaves, 0),
     retained: node.retained,
     preview: "",
     dim: children.every((c) => c.dim),
@@ -98,11 +96,20 @@ function leafCountOf(node: TreeNode | null): number {
 /**
  * The non-interactive part of a tree row.
  *
+ * This does NOT reduce work on a tree push: toArborist rebuilds every node
+ * object from scratch on each snapshot, so `d`'s identity changes for every
+ * row at once and the memo below misses on all of them — a backend tree
+ * update still re-renders the whole visible list. What it actually protects
+ * against is re-renders that leave `data`'s identity intact: a selection
+ * change, a recording toggle, dismissing the tree hint, a panel resize. In
+ * those cases `data` (and each unaffected row's `d`) is unchanged, so only
+ * the few rows whose `d`/isOpen/isRec actually changed re-render; the rest
+ * bail out here.
+ *
  * Only the presentation is memoized — the wrapping <div> keeps its click and
  * context-menu handlers inline, because those need the live NodeApi (for
  * expand/collapse) and would defeat memoization by changing identity every
- * render. `d` and the two booleans are stable within a tree snapshot, so the
- * default comparator is correct here.
+ * render.
  */
 const RowContent = memo(function RowContent({
   d, isOpen, isRec,
@@ -184,10 +191,35 @@ export function TopicTree() {
   // Selection always goes through applyFocus: it sets the backend focus, pulls
   // the subtree history in the same round trip, and applies the size guard.
   // Branch rows still toggle, so the collapsed-by-default tree stays navigable.
+  //
+  // The guard's leaf count cannot come from d: toArborist builds d from the
+  // *filtered* tree (applyFilter), so a branch narrowed down to a few text
+  // matches would report only those few leaves. SetFocus scopes purely by
+  // topic prefix on the backend and knows nothing about the frontend filter,
+  // so an undercount here would let the real, much larger subtree stream in
+  // full — exactly the firehose this guard exists to stop. Resolving against
+  // the store's unfiltered tree at click time (one findNode + countLeaves
+  // walk per click, not per render, over ~600 nodes) gives the guard the
+  // real number. (leafCount is imported as countLeaves — this component
+  // already has a local `leafCount` for the header's total-topics figure.)
   function handleRowClick(node: NodeApi<ArboristNode>) {
     const d = node.data;
     if (!d.isLeaf) node.toggle();
-    void applyFocus(d.id, d.isLeaf, d.leaves);
+    if (d.isLeaf) {
+      // A leaf's own subtree is itself — no walk needed.
+      void applyFocus(d.id, true, 1);
+      return;
+    }
+    const real = findNode(tree, d.id);
+    // d.id came from a render of this same tree, so real is normally found.
+    // It can miss only across a narrow gap — e.g. a reconnect resetting the
+    // store's tree (resetSession sets tree: null) between mousedown and this
+    // handler running. A branch of unknown size must never be treated as
+    // small, so "not found" counts as arbitrarily large rather than 0:
+    // applyFocus then falls back to the summary view instead of risking an
+    // unbounded stream.
+    const leaves = real ? countLeaves(real) : Number.POSITIVE_INFINITY;
+    void applyFocus(d.id, false, leaves);
   }
 
   function buildMenuItems(n: ArboristNode): MenuItem[] {
