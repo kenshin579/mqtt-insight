@@ -34,6 +34,12 @@ type focusBatch struct {
 	Dropped  int            `json:"dropped"`
 }
 
+// rateEvent is the mqtt:rate payload.
+type rateEvent struct {
+	Global  float64 `json:"global"`
+	Focused float64 `json:"focused"`
+}
+
 // App is the Wails-bound application.
 type App struct {
 	ctx        context.Context
@@ -68,6 +74,11 @@ func (a *App) startup(ctx context.Context) {
 		a.recorder = rec
 	}
 	a.rate = app.NewRateCounter()
+	// Invariant relied on below and in flush/treeLoop/rateLoop: a.ctx, a.store
+	// and a.rate are all set above, before the batcher or either ticker starts,
+	// and none of the three is ever reassigned afterward — so those goroutines
+	// dereference them unchecked. a.recorder is not part of this invariant:
+	// SQLiteRecorder can fail to open, so it stays nil-checked at every call site.
 	a.batcher = app.NewBatcher(50*time.Millisecond, a.flush)
 	a.batcher.Start()
 	stop := make(chan struct{})
@@ -106,11 +117,7 @@ func (a *App) flush(ms []mqtt.Message) {
 	}
 	a.rate.AddFocused(len(out))
 
-	dropped := 0
-	if len(out) > maxPerFlush {
-		dropped = len(out) - maxPerFlush
-		out = out[len(out)-maxPerFlush:]
-	}
+	out, dropped := app.CapBatch(out, maxPerFlush)
 	runtime.EventsEmit(a.ctx, "mqtt:messages", focusBatch{Focus: f, Messages: out, Dropped: dropped})
 }
 
@@ -126,9 +133,6 @@ func (a *App) treeLoop(stop <-chan struct{}) {
 	for {
 		select {
 		case <-tk.C:
-			if a.store == nil {
-				continue
-			}
 			// Cheap gate first: an unchanged tree must not pay for a deep copy.
 			if a.store.TreeRevision() == last {
 				continue
@@ -154,7 +158,7 @@ func (a *App) rateLoop(stop <-chan struct{}) {
 		select {
 		case <-tk.C:
 			g, f := a.rate.Rates()
-			runtime.EventsEmit(a.ctx, "mqtt:rate", map[string]any{"global": g, "focused": f})
+			runtime.EventsEmit(a.ctx, "mqtt:rate", rateEvent{Global: g, Focused: f})
 			a.rate.Advance()
 		case <-stop:
 			return
@@ -168,9 +172,7 @@ func (a *App) resetStream() {
 	a.mu.Lock()
 	a.focus = ""
 	a.mu.Unlock()
-	if a.rate != nil {
-		a.rate.Reset()
-	}
+	a.rate.Reset()
 }
 
 func (a *App) shutdown(ctx context.Context) {
@@ -353,6 +355,16 @@ func (a *App) History(topic string) []mqtt.Message {
 // SetFocus scopes the live message stream to a topic subtree and returns the
 // buffered history for it, so selection costs one round trip instead of two.
 // An empty topic stops the stream.
+//
+// SetFocus writes the new focus and releases the lock before reading history.
+// A flush landing in that window records the message, reads the already-updated
+// focus, and emits it live — and it is then still in the store when the
+// history read below runs, so the frontend can receive that one message twice.
+// This ordering is intentional: reading history before setting focus would
+// instead let a flush in that window match neither the old focus nor the new
+// one, silently dropping the message instead of duplicating it. A rare
+// duplicate is the acceptable failure mode for a tool whose job is trustworthy
+// visibility into a stream; a rare silent drop is not. Do not reorder these.
 func (a *App) SetFocus(topic string) []mqtt.Message {
 	a.mu.Lock()
 	a.focus = topic
