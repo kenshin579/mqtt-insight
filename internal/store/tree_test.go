@@ -38,7 +38,7 @@ func TestTreeInsertUpdatesLeafStats(t *testing.T) {
 	}
 }
 
-func TestTreeRevisionAdvancesOnInsertOnly(t *testing.T) {
+func TestTreeRevisionTracksMutationsNotReads(t *testing.T) {
 	tr := NewTree()
 	start := tr.Revision()
 
@@ -53,9 +53,32 @@ func TestTreeRevisionAdvancesOnInsertOnly(t *testing.T) {
 		t.Fatal("Snapshot must not advance the revision")
 	}
 
+	// Republishing to an existing leaf changes Preview/MessageCount/LastSeen
+	// without creating any node — the revision must still advance, or the
+	// emitter would skip real updates on exactly the busiest topics.
+	tr.Insert(mqtt.Message{Topic: "a/b", Payload: []byte("2"), Timestamp: time.Unix(2, 0)})
+	afterSecondInsert := tr.Revision()
+	if afterSecondInsert == afterInsert {
+		t.Fatal("Insert on an existing leaf must advance the revision")
+	}
+
 	tr.Clear()
-	if tr.Revision() == afterInsert {
+	if tr.Revision() == afterSecondInsert {
 		t.Fatal("Clear must advance the revision so the emptied tree is emitted")
+	}
+}
+
+func TestTreeSnapshotWithRevisionMatchesRevision(t *testing.T) {
+	tr := NewTree()
+	tr.Insert(mqtt.Message{Topic: "a/b", Payload: []byte("1"), Timestamp: time.Unix(1, 0)})
+
+	snap, rev := tr.SnapshotWithRevision()
+	if rev != tr.Revision() {
+		t.Fatalf("want revision %d, got %d", tr.Revision(), rev)
+	}
+	leaf := findChild(findChild(snap, "a"), "b")
+	if leaf == nil || leaf.Preview != "1" {
+		t.Fatalf("want snapshot to contain the insert, got %+v", leaf)
 	}
 }
 

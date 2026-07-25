@@ -16,7 +16,7 @@ interface ArboristNode {
   isLeaf: boolean;
   count: number; // leaf = own messageCount; branch = recursive sum of descendant leaf counts (F5)
   retained: boolean;
-  preview: string; // leaf only, 34 chars
+  preview: string; // leaf only; backend-truncated to previewRunes (48, see internal/store/preview.go)
   dim: boolean; // leaf: unsubscribed; branch: every descendant leaf dim
   children?: ArboristNode[];
 }

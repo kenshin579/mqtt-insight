@@ -68,6 +68,18 @@ func (t *Tree) Snapshot() *Node {
 	return copyNode(t.root)
 }
 
+// SnapshotWithRevision returns a deep copy together with the revision it
+// reflects, both read under a single lock acquisition. Prefer this over
+// separate Snapshot()/Revision() calls: taken apart, an Insert can land
+// between them, and a caller that snapshots first would record a revision
+// newer than the data it captured — silently masking that update until some
+// later unrelated mutation.
+func (t *Tree) SnapshotWithRevision() (*Node, uint64) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return copyNode(t.root), t.revision
+}
+
 func copyNode(n *Node) *Node {
 	cp := &Node{
 		Name: n.Name, FullTopic: n.FullTopic, MessageCount: n.MessageCount,
@@ -88,7 +100,11 @@ func (t *Tree) Clear() {
 }
 
 // Revision increments on every mutation. The emitter compares it against the
-// last emitted value so an unchanged tree is never re-serialized.
+// last emitted value so an unchanged tree is never re-serialized. It is a
+// cheap gate: read Revision() first and bail out if it matches the last
+// emitted value; only when it differs call SnapshotWithRevision() and store
+// the revision it returns, so the deep copy is skipped entirely on an idle
+// tree.
 func (t *Tree) Revision() uint64 {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
