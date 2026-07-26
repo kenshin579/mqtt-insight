@@ -25,7 +25,10 @@ export function pillState(
   if (!version) return { kind: "hidden" };
 
   if (updateInfo) {
-    if (updateError) {
+    // `!== null`, not truthiness: an update:error event having fired means an
+    // attempt failed, even if the message it carried was empty. Falling through
+    // to "available" there would show success after a failure.
+    if (updateError !== null) {
       return { kind: "error", message: updateError, releaseURL: updateInfo.releaseURL };
     }
     if (updateProgress !== null) {

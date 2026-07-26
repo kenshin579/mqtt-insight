@@ -60,4 +60,20 @@ describe("pillState", () => {
   it("falls back to the plain version if an error arrives with no update info", () => {
     expect(pillState("v0.2.0", null, null, "stray")).toEqual({ kind: "plain", text: "v0.2.0" });
   });
+
+  it("stays hidden even when update state has already arrived", () => {
+    // GetVersion and the update check resolve independently, so an update can
+    // land before the version does. Pins that the hidden guard short-circuits.
+    expect(pillState("", upd, 42, "boom")).toEqual({ kind: "hidden" });
+  });
+
+  it("treats an empty error message as a failure, not as no error", () => {
+    // An update:error event firing means an attempt failed; falling through to
+    // "available" would show success after a failure.
+    expect(pillState("v0.2.0", upd, null, "")).toEqual({
+      kind: "error",
+      message: "",
+      releaseURL: upd.releaseURL,
+    });
+  });
 });

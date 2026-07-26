@@ -20,6 +20,7 @@ export function VersionPill() {
   const updateProgress = useAppStore((s) => s.updateProgress);
   const updateError = useAppStore((s) => s.updateError);
   const setUpdateError = useAppStore((s) => s.setUpdateError);
+  const setUpdateProgress = useAppStore((s) => s.setUpdateProgress);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
   const st = pillState(version, updateInfo, updateProgress, updateError);
@@ -35,8 +36,12 @@ export function VersionPill() {
     items.push({
       label: t("updRestart"),
       // Clear any earlier failure first, so a retry does not start out looking
-      // like it already failed.
-      onClick: () => { setUpdateError(null); void ApplyUpdate(); },
+      // like it already failed. Then move to 0% immediately rather than waiting
+      // for the first update:progress event — the download takes a second or two
+      // to start reporting, and until then the pill would still read as an
+      // un-started update, so the click looks like it did nothing.
+
+      onClick: () => { setUpdateError(null); setUpdateProgress(0); void ApplyUpdate(); },
     });
   }
   items.push({ label: t("updOpenRelease"), onClick: () => BrowserOpenURL(st.releaseURL) });
