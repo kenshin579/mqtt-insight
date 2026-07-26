@@ -39,6 +39,7 @@ interface AppState {
   treeHintDismissed: boolean; recToastShown: boolean;
   settings: SettingsState;
   // update
+  version: string; // build version from Go; "" until GetVersion resolves
   updateInfo: UpdateInfo | null;
   updateProgress: number | null; // null = 진행 중 아님
   updateError: string | null;
@@ -68,6 +69,7 @@ interface AppState {
   dismissTreeHint: () => void;
   markRecToastShown: () => void;
   setSettings: (s: Partial<SettingsState>) => void;
+  setVersion: (v: string) => void;
   setUpdateInfo: (i: UpdateInfo | null) => void;
   setUpdateProgress: (p: number | null) => void;
   setUpdateError: (e: string | null) => void;
@@ -90,7 +92,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   pubTopic: "", pubHint: false,
   treeHintDismissed: false, recToastShown: false,
   settings: { lang: "ko", theme: "dark", defaultFormat: "plain", timestampFormat: "absolute", messageOrder: "newest", ringBufferSize: 200, checkUpdates: true },
-  updateInfo: null, updateProgress: null, updateError: null,
+  version: "", updateInfo: null, updateProgress: null, updateError: null,
 
   setStatus: (s, attempt = 0) => set({ status: s, attempt }),
   setBroker: (b) => set({ broker: b }),
@@ -197,6 +199,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   dismissTreeHint: () => set({ treeHintDismissed: true }),
   markRecToastShown: () => set({ recToastShown: true }),
   setSettings: (s) => set({ settings: { ...get().settings, ...s } }),
+  setVersion: (v) => set({ version: v }),
   setUpdateInfo: (i) => set({ updateInfo: i }),
   setUpdateProgress: (p) => set({ updateProgress: p }),
   setUpdateError: (e) => set({ updateError: e }),

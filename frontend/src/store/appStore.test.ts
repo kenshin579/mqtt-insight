@@ -100,4 +100,13 @@ describe("appStore focus stream", () => {
     st.focusTopic("c/d", true, [msg("c/d", "2019-01-01T00:00:00.000Z")]);
     expect(useAppStore.getState().focusMessages).toHaveLength(1);
   });
+
+  it("keeps the build version across a session reset", () => {
+    // The version is a property of the binary, not of a broker session —
+    // reconnecting must not blank the pill.
+    const st = useAppStore.getState();
+    st.setVersion("v0.2.0");
+    st.resetSession();
+    expect(useAppStore.getState().version).toBe("v0.2.0");
+  });
 });
