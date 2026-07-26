@@ -135,7 +135,7 @@ export function pillState(
 | `frontend/src/store/appStore.ts` | `version` 필드와 `setVersion` 추가 |
 | `frontend/src/App.tsx` | 타이틀바에 `<VersionPill />`, `updateInfo` 구독·`upd-dot` 제거, mount 시 `GetVersion()` |
 | `frontend/src/components/SettingsModal.tsx` | 업데이트 블록·`GetVersion()`·버전 푸터 제거 |
-| `frontend/src/lib/i18n.ts` | 짧은 실패 라벨 1개 추가(ko/en), 죽은 키 `updAvailable` 제거 |
+| `frontend/src/lib/i18n.ts` | 짧은 실패 라벨 1개 추가(ko/en) |
 | `frontend/src/App.css` | `.version-pill` 상태별 스타일 추가, `.upd-dot` 제거 |
 
 **i18n 키 정리** — 대부분 재사용한다.
@@ -146,10 +146,13 @@ export function pillState(
 | 팝오버 "릴리스 노트 보기" | `updOpenRelease` 재사용 (`릴리스 페이지 열기`) |
 | 진행률 | `updDownloading` 재사용 (`다운로드 중… {pct}%`) |
 | 실패 툴팁 전문 | `updError` 재사용 (`업데이트 실패: {msg}`) |
-| pill의 짧은 실패 라벨 | **신규 1개** — `updError`는 `{msg}`가 붙어 pill에 넣기엔 길다 |
+| 업데이트 pill 툴팁 | `updAvailable` 재사용 (`새 버전 {v} 사용 가능`) |
+| pill의 짧은 실패 라벨 | **신규 1개** `updFailedShort` — `updError`는 `{msg}`가 붙어 pill에 넣기엔 길다 |
 | `v0.2.0 → v0.3.0` | 키 불필요 — 버전 문자열과 화살표뿐이라 번역할 것이 없다 |
 
-`updAvailable`(`새 버전 {v} 사용 가능`)은 설정 모달 전용이었고 pill은 `from → to` 형식을 쓰므로 **더는 참조되지 않는다.** 다른 사용처가 없으면 제거한다.
+`updAvailable`은 설정 모달에서만 쓰이던 키지만 버리지 않는다. §5.1의 좁은 창 처리에서 pill 텍스트가 ellipsis로 잘리는데, 그때 `title` 툴팁에 들어갈 문구로 정확히 맞는다.
+
+즉 **신규 키는 `updFailedShort` 하나뿐이고, 제거되는 키는 없다.**
 
 **Go 백엔드는 전혀 바뀌지 않는다.** `GetVersion` / `GetUpdateInfo` / `ApplyUpdate` 바인딩과 `update:*` 이벤트를 그대로 쓴다.
 
