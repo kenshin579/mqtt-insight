@@ -10,8 +10,13 @@ body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(
 .tl-dots i:nth-child(3) { background: #28c840; }
 .titlebar .app-icon { display: flex; margin-left: 6px; }
 .titlebar .app-name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+/* flex-shrink must stay 1: with `flex: none` the ellipsis below can never fire,
+   because flexbox only truncates items it is allowed to shrink. min-width: 0
+   lifts the default min-content floor so the shrink can actually reach the
+   text. The pill is what gives way in a narrow window — the toolbar buttons
+   below are pinned instead. */
 .version-pill { font-family: var(--font-mono); font-size: 10.5px; color: var(--dim2);
-  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: none; }
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
 .version-pill.busy { color: var(--dim); }
 button.version-pill { background: var(--chip); border: none; border-radius: 999px;
   padding: 2px 8px; cursor: pointer; }
@@ -19,7 +24,7 @@ button.version-pill.update { color: var(--accent); }
 button.version-pill.failed { color: var(--err); }
 button.version-pill:hover { background: var(--hoverbg); }
 .tb-btn { background: none; border: 1px solid var(--btnborder); color: var(--dim); width: 24px; height: 24px; border-radius: 6px;
-  cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; flex: none; }
 .tb-btn.gear { font-size: 14px; }
 
 /* === Connection bar (A11, B3-B7, E9) === */
