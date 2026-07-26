@@ -53,6 +53,7 @@ describe("pillState", () => {
     expect(pillState("v0.2.0", upd, 42, "disk full")).toEqual({
       kind: "error",
       message: "disk full",
+      canSelfUpdate: true,
       releaseURL: upd.releaseURL,
     });
   });
@@ -73,7 +74,18 @@ describe("pillState", () => {
     expect(pillState("v0.2.0", upd, null, "")).toEqual({
       kind: "error",
       message: "",
+      canSelfUpdate: true,
       releaseURL: upd.releaseURL,
+    });
+  });
+
+  it("carries canSelfUpdate into the error state so a retry stays offerable", () => {
+    // Without this the failure state cannot tell whether applying is even
+    // possible, and the retry has to be dropped — stranding the user on a
+    // failed pill until the app restarts.
+    expect(pillState("v0.2.0", { ...upd, canSelfUpdate: false }, null, "boom")).toMatchObject({
+      kind: "error",
+      canSelfUpdate: false,
     });
   });
 });

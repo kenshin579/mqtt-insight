@@ -28,11 +28,19 @@ export function VersionPill() {
   if (st.kind === "hidden") return null;
   if (st.kind === "plain") return <span className="version-pill">{st.text}</span>;
   if (st.kind === "progress") {
-    return <span className="version-pill busy">{t("updDownloading", { pct: st.pct })}</span>;
+    // Tooltip for the same reason the other states carry one: a narrow window
+    // ellipsises the label and the percentage is the whole point of it.
+    const label = t("updDownloading", { pct: st.pct });
+    return <span className="version-pill busy" title={label}>{label}</span>;
   }
 
   const items: MenuItem[] = [];
-  if (st.kind === "available" && st.canSelfUpdate) {
+  // Offered in the error state as well as the available one — a failed download
+  // must be retryable in place. Gating this on `available` alone strands the
+  // user: error outranks available in pillState, and the only thing that clears
+  // the error is this very handler, so the pill would stay failed until the app
+  // was restarted. Restarting is exactly the cost this feature exists to avoid.
+  if (st.canSelfUpdate) {
     items.push({
       label: t("updRestart"),
       // Clear any earlier failure first, so a retry does not start out looking
@@ -40,7 +48,6 @@ export function VersionPill() {
       // for the first update:progress event — the download takes a second or two
       // to start reporting, and until then the pill would still read as an
       // un-started update, so the click looks like it did nothing.
-
       onClick: () => { setUpdateError(null); setUpdateProgress(0); void ApplyUpdate(); },
     });
   }

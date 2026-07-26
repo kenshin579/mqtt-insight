@@ -5,7 +5,10 @@ export type PillState =
   | { kind: "plain"; text: string }
   | { kind: "available"; from: string; to: string; canSelfUpdate: boolean; releaseURL: string }
   | { kind: "progress"; pct: number }
-  | { kind: "error"; message: string; releaseURL: string };
+  // canSelfUpdate rides along on the error variant too: a failed attempt must
+  // still offer a retry, and the consumer has no other way to know whether
+  // applying is even possible here.
+  | { kind: "error"; message: string; canSelfUpdate: boolean; releaseURL: string };
 
 /**
  * What the titlebar pill should show.
@@ -29,7 +32,12 @@ export function pillState(
     // attempt failed, even if the message it carried was empty. Falling through
     // to "available" there would show success after a failure.
     if (updateError !== null) {
-      return { kind: "error", message: updateError, releaseURL: updateInfo.releaseURL };
+      return {
+        kind: "error",
+        message: updateError,
+        canSelfUpdate: updateInfo.canSelfUpdate,
+        releaseURL: updateInfo.releaseURL,
+      };
     }
     if (updateProgress !== null) {
       return { kind: "progress", pct: updateProgress };
