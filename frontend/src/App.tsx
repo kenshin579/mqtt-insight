@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { initEventBridge } from "./bridge/events";
 import { useAppStore } from "./store/appStore";
-import { Connect, GetProfiles, GetSettings, RecordedTopics, GetUpdateInfo } from "../wailsjs/go/main/App";
+import { Connect, GetProfiles, GetSettings, RecordedTopics, GetUpdateInfo, GetVersion } from "../wailsjs/go/main/App";
 import { config } from "../wailsjs/go/models";
 import { setLang, t } from "./lib/i18n";
 import { applyTheme } from "./lib/theme";
@@ -12,6 +12,7 @@ import { ConnectionHome } from "./components/ConnectionHome";
 import { ConnectionBar } from "./components/ConnectionBar";
 import { ConnectionForm } from "./components/ConnectionForm";
 import { SettingsModal } from "./components/SettingsModal";
+import { VersionPill } from "./components/VersionPill";
 import { ConnectingOverlay } from "./components/ConnectingOverlay";
 import { ReconnectBanner } from "./components/ReconnectBanner";
 import { TopicTree } from "./components/TopicTree";
@@ -30,7 +31,7 @@ function App() {
   const dismissTreeHint = useAppStore((s) => s.dismissTreeHint);
   const markRecToastShown = useAppStore((s) => s.markRecToastShown);
   const setFmt = useAppStore((s) => s.setFmt);
-  const updateInfo = useAppStore((s) => s.updateInfo);
+  const setVersion = useAppStore((s) => s.setVersion);
   const setUpdateInfo = useAppStore((s) => s.setUpdateInfo);
   const [profiles, setProfiles] = useState<config.Profile[]>([]);
   const [showConnect, setShowConnect] = useState(false);
@@ -53,6 +54,7 @@ function App() {
       if (s.recToastShown) markRecToastShown();
       setFmt((s.defaultFormat as import("./store/appStore").Fmt) || "plain"); // G5: initial fmt = settings default
     });
+    GetVersion().then(setVersion);
     GetUpdateInfo().then((i) => { if (i) setUpdateInfo(i as import("./types").UpdateInfo); });
     return cleanup;
   }, []);
@@ -89,10 +91,11 @@ function App() {
         <span className="tl-dots"><i /><i /><i /></span>
         <span className="app-icon"><Logo size={16} /></span>
         <span className="app-name">MQTT Insight</span>
+        <VersionPill />
         <span className="spacer" />
         <button className="tb-btn" title={t("tourTitle")} onClick={() => setShowGuide(true)}>?</button>
         <button className="tb-btn gear" title={t("setTitle")} onClick={() => setShowSettings(true)}>
-          ⚙{updateInfo && <i className="upd-dot" />}
+          ⚙
         </button>
       </div>
       <ConnectionBar onOpenConnect={() => openConnect()} />
