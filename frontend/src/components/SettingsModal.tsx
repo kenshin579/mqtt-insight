@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
-import { SaveSettings, GetVersion, ApplyUpdate } from "../../wailsjs/go/main/App";
-import { BrowserOpenURL } from "../../wailsjs/runtime/runtime";
+import { SaveSettings } from "../../wailsjs/go/main/App";
 import { config } from "../../wailsjs/go/models";
 import { useAppStore, type SettingsState, type Fmt } from "../store/appStore";
 import { setLang, t, type Lang } from "../lib/i18n";
@@ -15,15 +13,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const setFmt = useAppStore((s) => s.setFmt);
   const treeHintDismissed = useAppStore((s) => s.treeHintDismissed);
   const recToastShown = useAppStore((s) => s.recToastShown);
-  const updateInfo = useAppStore((s) => s.updateInfo);
-  const updateProgress = useAppStore((s) => s.updateProgress);
-  const updateError = useAppStore((s) => s.updateError);
-  const setUpdateError = useAppStore((s) => s.setUpdateError);
-  const [version, setVersion] = useState("");
 
   useEscape(onClose); // C42/F28
-
-  useEffect(() => { GetVersion().then(setVersion); }, []);
 
   // Applies a settings patch: store + persisted backend Settings (C38) + side effects.
   function patch(next: Partial<SettingsState>) {
@@ -151,33 +142,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        {updateInfo && (
-          <div className="settings-update">
-            <span className="settings-update-label">{t("updAvailable", { v: updateInfo.version })}</span>
-            {updateProgress !== null ? (
-              <button className="btn-accent" disabled>
-                {t("updDownloading", { pct: updateProgress })}
-              </button>
-            ) : updateInfo.canSelfUpdate ? (
-              <button className="btn-accent" onClick={() => { setUpdateError(null); ApplyUpdate(); }}>
-                {t("updRestart")}
-              </button>
-            ) : (
-              <button className="btn-accent" onClick={() => BrowserOpenURL(updateInfo.releaseURL)}>
-                {t("updOpenRelease")}
-              </button>
-            )}
-            {updateError && (
-              <div className="settings-update-error">
-                {t("updError", { msg: updateError })}{" "}
-                <a href={updateInfo.releaseURL} onClick={(e) => { e.preventDefault(); BrowserOpenURL(updateInfo.releaseURL); }}>{t("updOpenRelease")}</a>
-              </div>
-            )}
-          </div>
-        )}
-
         <div className="settings-footer">
-          <div className="settings-version">mqtt-insight {version}</div>
           <button className="btn-accent full" onClick={onClose}>{t("setDone")}</button>
         </div>
       </div>
