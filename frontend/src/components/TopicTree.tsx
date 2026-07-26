@@ -11,6 +11,7 @@ import { findNode, leafCount as countLeaves } from "../lib/subtree";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { SubscriptionChips, TreeEmptyState } from "./SubscriptionChips";
 import { Toast } from "./Toast";
+import { identifierInput } from "../lib/inputProps";
 
 /** localeCompare builds a fresh collator on every call; one shared instance
  *  serves every comparison in the sort below. */
@@ -259,6 +260,7 @@ export function TopicTree() {
           <span className="tt-filter-glyph">⌕</span>
           <input
             className="tt-filter-input mono"
+            {...identifierInput}
             placeholder={t("filterPh")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
