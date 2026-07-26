@@ -38,6 +38,8 @@ export function SaveProfile(arg1:config.Profile,arg2:string):Promise<void>;
 
 export function SaveSettings(arg1:config.Settings):Promise<void>;
 
+export function SetFocus(arg1:string):Promise<Array<mqtt.Message>>;
+
 export function Subscribe(arg1:string,arg2:number):Promise<void>;
 
 export function Unsubscribe(arg1:string):Promise<void>;

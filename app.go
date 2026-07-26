@@ -29,9 +29,12 @@ type App struct {
 	batcher    *app.Batcher
 	recorder   *store.SQLiteRecorder
 	connCancel context.CancelFunc
-	connState  string       // last emitted status state (protected by mu)
-	updateInfo *update.Info // startup 체크 결과, nil = 최신 (protected by mu)
-	updating   bool         // ApplyUpdate 진행 중 가드 (protected by mu)
+	connState  string           // last emitted status state (protected by mu)
+	updateInfo *update.Info     // startup 체크 결과, nil = 최신 (protected by mu)
+	updating   bool             // ApplyUpdate 진행 중 가드 (protected by mu)
+	focus      string           // focused topic subtree; "" = stream nothing (protected by mu)
+	rate       *app.RateCounter // sliding-window msg/s
+	tickStop   chan struct{}    // stops the tree/rate tickers
 }
 
 // NewApp creates the app, loading persisted config.
@@ -48,17 +51,18 @@ func (a *App) startup(ctx context.Context) {
 	if rec, err := store.NewSQLiteRecorder(recPath); err == nil {
 		a.recorder = rec
 	}
-	a.batcher = app.NewBatcher(50*time.Millisecond, func(ms []mqtt.Message) {
-		for _, m := range ms {
-			a.store.Record(m)
-			if a.recorder != nil {
-				a.recorder.Record(m)
-			}
-		}
-		runtime.EventsEmit(a.ctx, "mqtt:messages", ms)
-		runtime.EventsEmit(a.ctx, "mqtt:tree", a.store.TreeSnapshot())
-	})
+	a.rate = app.NewRateCounter()
+	// Invariant relied on below and in flush/treeLoop/rateLoop: a.ctx, a.store
+	// and a.rate are all set above, before the batcher or either ticker starts,
+	// and none of the three is ever reassigned afterward — so those goroutines
+	// dereference them unchecked. a.recorder is not part of this invariant:
+	// SQLiteRecorder can fail to open, so it stays nil-checked at every call site.
+	a.batcher = app.NewBatcher(50*time.Millisecond, a.flush)
 	a.batcher.Start()
+	stop := make(chan struct{})
+	a.tickStop = stop
+	go a.treeLoop(stop)
+	go a.rateLoop(stop)
 	if exe, err := os.Executable(); err == nil {
 		update.CleanupBak(exe)
 	}
@@ -68,6 +72,10 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	if a.tickStop != nil {
+		close(a.tickStop)
+		a.tickStop = nil
+	}
 	if a.batcher != nil {
 		a.batcher.Stop()
 	}
@@ -134,6 +142,7 @@ func (a *App) Connect(p config.Profile) error {
 		_ = oldClient.Disconnect()
 	}
 	a.store.Clear()
+	a.resetStream()
 
 	a.emitStatus("connecting", 0, "")
 	cfg := mqtt.ConnectionConfig{
@@ -188,6 +197,7 @@ func (a *App) Disconnect() error {
 	c := a.client
 	cancel := a.connCancel
 	a.mu.Unlock()
+	a.resetStream()
 	if cancel != nil {
 		cancel()
 	}
@@ -236,6 +246,29 @@ func (a *App) History(topic string) []mqtt.Message {
 		return nil
 	}
 	return a.store.History(topic)
+}
+
+// SetFocus scopes the live message stream to a topic subtree and returns the
+// buffered history for it, so selection costs one round trip instead of two.
+// An empty topic stops the stream.
+//
+// SetFocus writes the new focus and releases the lock before reading history.
+// A flush landing in that window records the message, reads the already-updated
+// focus, and emits it live — and it is then still in the store when the
+// history read below runs, so the frontend can receive that one message twice.
+// This ordering is intentional: reading history before setting focus would
+// instead let a flush in that window match neither the old focus nor the new
+// one, silently dropping the message instead of duplicating it. A rare
+// duplicate is the acceptable failure mode for a tool whose job is trustworthy
+// visibility into a stream; a rare silent drop is not. Do not reorder these.
+func (a *App) SetFocus(topic string) []mqtt.Message {
+	a.mu.Lock()
+	a.focus = topic
+	a.mu.Unlock()
+	if topic == "" || a.store == nil {
+		return nil
+	}
+	return a.store.HistorySubtree(topic, subtreeHistoryLimit)
 }
 
 // EnableRecording starts persisting a topic to SQLite.

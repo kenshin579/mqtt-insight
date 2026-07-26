@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppStore } from "../store/appStore";
 import { Subscribe, Unsubscribe } from "../../wailsjs/go/main/App";
 import { t } from "../lib/i18n";
+import { identifierInput } from "../lib/inputProps";
 
 export function SubscriptionChips() {
   const subs = useAppStore((s) => s.subs);
@@ -31,6 +32,7 @@ export function SubscriptionChips() {
         <div className="add-sub-row">
           <input
             className="mono"
+            {...identifierInput}
             placeholder={t("addSubPh")}
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
@@ -68,6 +70,7 @@ export function TreeEmptyState() {
       </button>
       <div className="tree-empty-specific">
         <input
+          {...identifierInput}
           placeholder={t("subSpecificPh")}
           value={pattern}
           onChange={(e) => setPattern(e.target.value)}

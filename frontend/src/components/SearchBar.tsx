@@ -1,6 +1,7 @@
 import { useAppStore } from "../store/appStore";
 import { t } from "../lib/i18n";
 import { useEscape } from "../lib/useEscape";
+import { identifierInput } from "../lib/inputProps";
 
 // B29/C26/C27/F9: message search row — ⌕ + live filter input + N/M match counter + ✕ close (clears query).
 export function SearchBar({ matches, total }: { matches: number; total: number }) {
@@ -12,6 +13,7 @@ export function SearchBar({ matches, total }: { matches: number; total: number }
       <span className="glyph">⌕</span>
       <input
         className="mono"
+        {...identifierInput}
         autoFocus
         placeholder={t("searchPh")}
         value={searchQuery}

@@ -1,11 +1,12 @@
 import { EventsOn, EventsOff } from "../../wailsjs/runtime/runtime";
 import { useAppStore } from "../store/appStore";
-import type { Message, TreeNode, StatusEvent, UpdateInfo } from "../types";
+import type { TreeNode, StatusEvent, UpdateInfo, FocusBatch, RateEvent } from "../types";
 
 /** Wire Wails backend events into the store. Call once on mount; returns cleanup. */
 export function initEventBridge(): () => void {
-  EventsOn("mqtt:messages", (ms: Message[]) => useAppStore.getState().pushMessages(ms));
+  EventsOn("mqtt:messages", (b: FocusBatch) => useAppStore.getState().pushMessages(b));
   EventsOn("mqtt:tree", (t: TreeNode) => useAppStore.getState().setTree(t));
+  EventsOn("mqtt:rate", (r: RateEvent) => useAppStore.getState().setRate(r));
   EventsOn("mqtt:status", (e: StatusEvent) => {
     const st = useAppStore.getState();
     st.setStatus(e.state, e.attempt);
@@ -19,5 +20,13 @@ export function initEventBridge(): () => void {
     st.setUpdateError(msg);
   });
   return () =>
-    EventsOff("mqtt:messages", "mqtt:tree", "mqtt:status", "update:available", "update:progress", "update:error");
+    EventsOff(
+      "mqtt:messages",
+      "mqtt:tree",
+      "mqtt:rate",
+      "mqtt:status",
+      "update:available",
+      "update:progress",
+      "update:error"
+    );
 }

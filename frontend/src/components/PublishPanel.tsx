@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Publish } from "../../wailsjs/go/main/App";
 import { mqtt } from "../../wailsjs/go/models";
 import { useAppStore } from "../store/appStore";
+import { applyFocus } from "../bridge/focus";
 import { t } from "../lib/i18n";
+import { identifierInput } from "../lib/inputProps";
 
 // Go []byte is unmarshaled from a base64 STRING over the wire, so encode payload to base64 (G9).
 function toBase64(s: string): string {
@@ -20,7 +22,6 @@ export function PublishPanel() {
   const setPubTopic = useAppStore((s) => s.setPubTopic);
   const status = useAppStore((s) => s.status);
   const activeVersion = useAppStore((s) => s.activeVersion);
-  const selectTopic = useAppStore((s) => s.selectTopic);
 
   const [payload, setPayload] = useState("");
   const [qos, setQos] = useState(0);
@@ -52,7 +53,7 @@ export function PublishPanel() {
     });
     (m as unknown as { payload: string }).payload = toBase64(payload);
     await Publish(m);
-    setTimeout(() => selectTopic(pubTopic, null), 30);
+    setTimeout(() => void applyFocus(pubTopic, true, 1), 30);
   }
 
   function updProp(i: number, k: keyof UserProp, v: string) {
@@ -73,6 +74,7 @@ export function PublishPanel() {
       <div className="pub-row">
         <input
           className="mono"
+          {...identifierInput}
           value={pubTopic}
           placeholder={t("pubTopicPh")}
           onChange={(e) => setPubTopic(e.target.value, false)} // C37: manual edit clears the hint
@@ -96,20 +98,20 @@ export function PublishPanel() {
       {showProps && (
         <div className="props-section">
           <div className="pub-row">
-            <input className="mono" placeholder={t("ctPlaceholder")} value={contentType} onChange={(e) => setContentType(e.target.value)} />
-            <input className="mono" placeholder="response topic" value={responseTopic} onChange={(e) => setResponseTopic(e.target.value)} />
+            <input className="mono" {...identifierInput} placeholder={t("ctPlaceholder")} value={contentType} onChange={(e) => setContentType(e.target.value)} />
+            <input className="mono" {...identifierInput} placeholder="response topic" value={responseTopic} onChange={(e) => setResponseTopic(e.target.value)} />
           </div>
           {userProps.map((p, i) => (
             <div className="pub-row" key={i}>
-              <input className="mono" placeholder="key" value={p.key} onChange={(e) => updProp(i, "key", e.target.value)} />
-              <input className="mono" placeholder="value" value={p.value} onChange={(e) => updProp(i, "value", e.target.value)} />
+              <input className="mono" {...identifierInput} placeholder="key" value={p.key} onChange={(e) => updProp(i, "key", e.target.value)} />
+              <input className="mono" {...identifierInput} placeholder="value" value={p.value} onChange={(e) => updProp(i, "value", e.target.value)} />
               <button className="prop-remove" onClick={() => setUserProps(userProps.filter((_, idx) => idx !== i))}>✕</button>
             </div>
           ))}
           <button className="prop-add" onClick={() => setUserProps([...userProps, { key: "", value: "" }])}>{t("propAddUser")}</button>
         </div>
       )}
-      <textarea className="pub-payload mono" placeholder='{"value": 23.5}' value={payload} onChange={(e) => setPayload(e.target.value)} />
+      <textarea className="pub-payload mono" {...identifierInput} placeholder='{"value": 23.5}' value={payload} onChange={(e) => setPayload(e.target.value)} />
     </div>
   );
 }

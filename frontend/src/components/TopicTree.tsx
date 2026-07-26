@@ -1,15 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Tree, NodeApi } from "react-arborist";
 import { useAppStore } from "../store/appStore";
-import { bytesToString } from "../lib/payload";
 import { matchesAny, type Sub } from "../lib/mqttMatch";
 import { t } from "../lib/i18n";
-import type { TreeNode, Message } from "../types";
+import type { TreeNode } from "../types";
 import { EnableRecording, DisableRecording, Publish, SaveSettings } from "../../wailsjs/go/main/App";
 import { mqtt, config } from "../../wailsjs/go/models";
+import { applyFocus } from "../bridge/focus";
+import { findNode, leafCount as countLeaves } from "../lib/subtree";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { SubscriptionChips, TreeEmptyState } from "./SubscriptionChips";
 import { Toast } from "./Toast";
+import { identifierInput } from "../lib/inputProps";
+
+/** localeCompare builds a fresh collator on every call; one shared instance
+ *  serves every comparison in the sort below. */
+const collator = new Intl.Collator();
 
 interface ArboristNode {
   id: string;
@@ -17,7 +23,7 @@ interface ArboristNode {
   isLeaf: boolean;
   count: number; // leaf = own messageCount; branch = recursive sum of descendant leaf counts (F5)
   retained: boolean;
-  preview: string; // leaf only, 34 chars
+  preview: string; // leaf only, backend-truncated
   dim: boolean; // leaf: unsubscribed; branch: every descendant leaf dim
   children?: ArboristNode[];
 }
@@ -63,12 +69,12 @@ function toArborist(node: TreeNode, subs: Sub[]): ArboristNode {
       isLeaf: true,
       count: node.messageCount,
       retained: node.retained,
-      preview: node.lastPayload ? bytesToString(node.lastPayload).slice(0, 34) : "",
+      preview: node.preview ?? "",
       dim: !matchesAny(node.fullTopic, subs),
     };
   }
   const children = [...node.children!]
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort((a, b) => collator.compare(a.name, b.name))
     .map((c) => toArborist(c, subs));
   return {
     id: node.fullTopic,
@@ -88,12 +94,48 @@ function leafCountOf(node: TreeNode | null): number {
   return node.children.reduce((s, c) => s + count(c), 0);
 }
 
+/**
+ * The non-interactive part of a tree row.
+ *
+ * This does NOT reduce work on a tree push: toArborist rebuilds every node
+ * object from scratch on each snapshot, so `d`'s identity changes for every
+ * row at once and the memo below misses on all of them — a backend tree
+ * update still re-renders the whole visible list. What it actually protects
+ * against is re-renders that leave `data`'s identity intact: a selection
+ * change, a recording toggle, dismissing the tree hint, a panel resize. In
+ * those cases `data` (and each unaffected row's `d`) is unchanged, so only
+ * the few rows whose `d`/isOpen/isRec actually changed re-render; the rest
+ * bail out here.
+ *
+ * Only the presentation is memoized — the wrapping <div> keeps its click and
+ * context-menu handlers inline, because those need the live NodeApi (for
+ * expand/collapse) and would defeat memoization by changing identity every
+ * render.
+ */
+const RowContent = memo(function RowContent({
+  d, isOpen, isRec,
+}: {
+  d: ArboristNode;
+  isOpen: boolean;
+  isRec: boolean;
+}) {
+  return (
+    <>
+      <span className="tt-caret">{d.isLeaf ? "" : isOpen ? "▾" : "▸"}</span>
+      {isRec && <span className="tt-recdot">●</span>}
+      <span className={"tt-name " + (d.isLeaf ? "leaf" : "branch")}>{d.name}</span>
+      {d.count > 0 && <span className="tt-count">{d.count}</span>}
+      {d.retained && <span className="tt-retained" title={t("retainedTip")}>R</span>}
+      {d.isLeaf && d.preview && <span className="tt-preview">{d.preview}</span>}
+    </>
+  );
+});
+
 export function TopicTree() {
   const tree = useAppStore((s) => s.tree);
   const subs = useAppStore((s) => s.subs);
-  const liveMessages = useAppStore((s) => s.liveMessages);
   const selectedTopic = useAppStore((s) => s.selectedTopic);
-  const selectTopic = useAppStore((s) => s.selectTopic);
+  const summaryTopic = useAppStore((s) => s.summaryTopic);
   const setPubTopic = useAppStore((s) => s.setPubTopic);
   const recording = useAppStore((s) => s.recording);
   const toggleRecordingTopic = useAppStore((s) => s.toggleRecordingTopic);
@@ -123,7 +165,7 @@ export function TopicTree() {
   const data = useMemo(() => {
     const filtered = applyFilter(tree, filter);
     if (!filtered?.children?.length) return [];
-    return [...filtered.children].sort((a, b) => a.name.localeCompare(b.name)).map((c) => toArborist(c, subs));
+    return [...filtered.children].sort((a, b) => collator.compare(a.name, b.name)).map((c) => toArborist(c, subs));
   }, [tree, filter, subs]);
 
   // Persist treeHintDismissed/recToastShown alongside the rest of the current settings (C25/A7).
@@ -147,14 +189,38 @@ export function TopicTree() {
     void persistFlags({ treeHintDismissed: true });
   }
 
+  // Selection always goes through applyFocus: it sets the backend focus, pulls
+  // the subtree history in the same round trip, and applies the size guard.
+  // Branch rows still toggle, so the collapsed-by-default tree stays navigable.
+  //
+  // The guard's leaf count cannot come from d: toArborist builds d from the
+  // *filtered* tree (applyFilter), so a branch narrowed down to a few text
+  // matches would report only those few leaves. SetFocus scopes purely by
+  // topic prefix on the backend and knows nothing about the frontend filter,
+  // so an undercount here would let the real, much larger subtree stream in
+  // full — exactly the firehose this guard exists to stop. Resolving against
+  // the store's unfiltered tree at click time (one findNode + countLeaves
+  // walk per click, not per render, over ~600 nodes) gives the guard the
+  // real number. (leafCount is imported as countLeaves — this component
+  // already has a local `leafCount` for the header's total-topics figure.)
   function handleRowClick(node: NodeApi<ArboristNode>) {
-    if (!node.data.isLeaf) node.toggle();
-    const id = node.data.id;
-    let latest: Message | null = null;
-    for (let i = liveMessages.length - 1; i >= 0; i--) {
-      if (liveMessages[i].topic === id) { latest = liveMessages[i]; break; }
+    const d = node.data;
+    if (!d.isLeaf) node.toggle();
+    if (d.isLeaf) {
+      // A leaf's own subtree is itself — no walk needed.
+      void applyFocus(d.id, true, 1);
+      return;
     }
-    selectTopic(id, latest);
+    const real = findNode(tree, d.id);
+    // d.id came from a render of this same tree, so real is normally found.
+    // It can miss only across a narrow gap — e.g. a reconnect resetting the
+    // store's tree (resetSession sets tree: null) between mousedown and this
+    // handler running. A branch of unknown size must never be treated as
+    // small, so "not found" counts as arbitrarily large rather than 0:
+    // applyFocus then falls back to the summary view instead of risking an
+    // unbounded stream.
+    const leaves = real ? countLeaves(real) : Number.POSITIVE_INFINITY;
+    void applyFocus(d.id, false, leaves);
   }
 
   function buildMenuItems(n: ArboristNode): MenuItem[] {
@@ -194,6 +260,7 @@ export function TopicTree() {
           <span className="tt-filter-glyph">⌕</span>
           <input
             className="tt-filter-input mono"
+            {...identifierInput}
             placeholder={t("filterPh")}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -218,34 +285,27 @@ export function TopicTree() {
           <TreeEmptyState />
         ) : (
           <Tree
+            key={filter ? "filtered" : "browse"}
             data={data}
-            openByDefault={true}
+            openByDefault={!!filter}
             width="100%"
             height={height || 400}
             rowHeight={26}
           >
-            {({ node, style, dragHandle }) => {
+            {({ node, style }) => {
               const d = node.data;
-              const isRec = recording.has(d.id);
-              const selected = selectedTopic === d.id;
-              const rowClass = ["tt-row", selected && "sel", d.dim && "dim"].filter(Boolean).join(" ");
+              const selected = (selectedTopic ?? summaryTopic) === d.id;
               return (
                 <div
-                  ref={dragHandle}
                   style={{ ...style, paddingLeft: 8 + node.level * 15 }}
-                  className={rowClass}
+                  className={["tt-row", selected && "sel", d.dim && "dim"].filter(Boolean).join(" ")}
                   onClick={() => handleRowClick(node)}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     setMenu({ x: e.clientX, y: e.clientY, node: d });
                   }}
                 >
-                  <span className="tt-caret">{d.isLeaf ? "" : node.isOpen ? "▾" : "▸"}</span>
-                  {isRec && <span className="tt-recdot">●</span>}
-                  <span className={"tt-name " + (d.isLeaf ? "leaf" : "branch")}>{d.name}</span>
-                  {d.count > 0 && <span className="tt-count">{d.count}</span>}
-                  {d.retained && <span className="tt-retained" title={t("retainedTip")}>R</span>}
-                  {d.isLeaf && d.preview && <span className="tt-preview">{d.preview}</span>}
+                  <RowContent d={d} isOpen={node.isOpen} isRec={recording.has(d.id)} />
                   <button
                     className="tt-menu-btn"
                     title={t("rowMenuTitle")}

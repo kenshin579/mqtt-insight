@@ -30,12 +30,27 @@ func TestMemoryStoreIsolatesPayloadBytes(t *testing.T) {
 		t.Fatalf("history payload corrupted by caller mutation: got %s", got[0].Payload)
 	}
 	leaf := s.TreeSnapshot().Children[0]
-	if string(leaf.LastPayload) != "abc" {
-		t.Fatalf("tree payload corrupted by caller mutation: got %s", leaf.LastPayload)
+	if leaf.Preview != "abc" {
+		t.Fatalf("tree preview corrupted by caller mutation: got %q", leaf.Preview)
 	}
 
 	s.History("t")[0].Payload[0] = 'Y' // mutate returned copy; store must be unaffected
 	if got := s.History("t"); string(got[0].Payload) != "abc" {
 		t.Fatalf("history payload corrupted by mutating returned copy: got %s", got[0].Payload)
+	}
+}
+
+func TestMemoryStoreHistorySubtree(t *testing.T) {
+	s := NewMemoryStore(5)
+	s.Record(mqtt.Message{Topic: "r/1/a", Payload: []byte("x"), Timestamp: time.Unix(1, 0)})
+	s.Record(mqtt.Message{Topic: "r/1/b", Payload: []byte("y"), Timestamp: time.Unix(2, 0)})
+	s.Record(mqtt.Message{Topic: "r/2/a", Payload: []byte("z"), Timestamp: time.Unix(3, 0)})
+
+	got := s.HistorySubtree("r/1", 10)
+	if len(got) != 2 {
+		t.Fatalf("want 2 messages under r/1, got %d", len(got))
+	}
+	if s.TreeRevision() == 0 {
+		t.Fatal("TreeRevision must reflect recorded messages")
 	}
 }

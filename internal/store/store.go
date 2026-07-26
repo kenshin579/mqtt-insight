@@ -6,7 +6,10 @@ import "github.com/kenshin579/mqtt-insight/internal/mqtt"
 type MessageStore interface {
 	Record(m mqtt.Message)
 	History(topic string) []mqtt.Message
+	HistorySubtree(prefix string, limit int) []mqtt.Message
 	TreeSnapshot() *Node
+	TreeSnapshotWithRevision() (*Node, uint64)
+	TreeRevision() uint64
 	Clear()
 	SetCapacity(n int)
 }
@@ -29,6 +32,15 @@ func (s *MemoryStore) Record(m mqtt.Message) {
 
 func (s *MemoryStore) History(topic string) []mqtt.Message { return s.ring.Get(topic) }
 func (s *MemoryStore) TreeSnapshot() *Node                 { return s.tree.Snapshot() }
+
+func (s *MemoryStore) HistorySubtree(prefix string, limit int) []mqtt.Message {
+	return s.ring.GetSubtree(prefix, limit)
+}
+func (s *MemoryStore) TreeRevision() uint64 { return s.tree.Revision() }
+
+func (s *MemoryStore) TreeSnapshotWithRevision() (*Node, uint64) {
+	return s.tree.SnapshotWithRevision()
+}
 
 func (s *MemoryStore) Clear() {
 	s.tree.Clear()

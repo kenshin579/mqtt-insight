@@ -15,7 +15,7 @@ export interface TreeNode {
   fullTopic: string;
   children?: TreeNode[];
   messageCount: number;
-  lastPayload?: string; // base64
+  preview?: string; // backend-truncated display string (see internal/store/preview.go)
   lastSeen: string;
   retained: boolean;
 }
@@ -29,4 +29,17 @@ export interface UpdateInfo {
   releaseURL: string;
   assetURL: string;
   canSelfUpdate: boolean;
+}
+
+/** mqtt:messages payload — messages already scoped to `focus` by the backend. */
+export interface FocusBatch {
+  focus: string;
+  messages: Message[];
+  dropped: number;
+}
+
+/** mqtt:rate payload — backend-computed messages/second over a 5s window. */
+export interface RateEvent {
+  global: number;
+  focused: number;
 }

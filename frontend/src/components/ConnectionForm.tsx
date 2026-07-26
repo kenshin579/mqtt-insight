@@ -5,6 +5,7 @@ import { useAppStore } from "../store/appStore";
 import { classifyConnectError } from "../lib/connectError";
 import { t } from "../lib/i18n";
 import { useEscape } from "../lib/useEscape";
+import { identifierInput } from "../lib/inputProps";
 
 // C8: "+ 새 연결" / fresh-entry defaults — host blank, port 1883, tcp, 5.0, autoReconnect true.
 const empty = (): config.Profile => config.Profile.createFrom({
@@ -134,7 +135,7 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
 
         {tab === "quick" ? (
           <div className="form-body">
-            <label>{t("lblHost")} <input className="mono" placeholder="localhost" value={p.host} onChange={(e) => upd("host", e.target.value)} /></label>
+            <label>{t("lblHost")} <input className="mono" {...identifierInput} placeholder="localhost" value={p.host} onChange={(e) => upd("host", e.target.value)} /></label>
             <label>{t("lblPort")} <input className="mono" type="number" value={p.port} onChange={(e) => upd("port", +e.target.value)} /></label>
             <label>{t("lblTransport")}
               <select value={p.transport} onChange={(e) => upd("transport", e.target.value)}>
@@ -155,7 +156,7 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
               </label>
             </div>
             <div className="field-group">
-              <label>{t("lblHost")} <input className="mono" placeholder="localhost" value={p.host} onChange={(e) => upd("host", e.target.value)} /></label>
+              <label>{t("lblHost")} <input className="mono" {...identifierInput} placeholder="localhost" value={p.host} onChange={(e) => upd("host", e.target.value)} /></label>
               <label>{t("lblPort")} <input className="mono" type="number" value={p.port} onChange={(e) => upd("port", +e.target.value)} /></label>
               <label>{t("lblTransport")}
                 <select value={p.transport} onChange={(e) => upd("transport", e.target.value)}>
@@ -163,19 +164,19 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
                   <option value="ws">WebSocket</option><option value="wss">WebSocket Secure</option>
                 </select>
               </label>
-              <label>{t("lblClientId")} <input value={p.clientId} onChange={(e) => upd("clientId", e.target.value)} /></label>
+              <label>{t("lblClientId")} <input {...identifierInput} value={p.clientId} onChange={(e) => upd("clientId", e.target.value)} /></label>
               <label>{t("lblKeepAlive")} <input className="mono" type="number" value={p.keepAlive} onChange={(e) => upd("keepAlive", +e.target.value)} /></label>
               <label className="row-check"><input type="checkbox" checked={p.cleanSession} onChange={(e) => upd("cleanSession", e.target.checked)} /> {t("lblCleanSession")}</label>
               <label className="row-check"><input type="checkbox" checked={p.autoReconnect} onChange={(e) => upd("autoReconnect", e.target.checked)} /> {t("autoReconnect")}</label>
             </div>
             <div className="field-group">
-              <label>{t("lblUser")} <input value={p.username} onChange={(e) => upd("username", e.target.value)} /></label>
+              <label>{t("lblUser")} <input {...identifierInput} value={p.username} onChange={(e) => upd("username", e.target.value)} /></label>
               <label>{t("lblPass")} <input type="password" value={p.password} onChange={(e) => upd("password", e.target.value)} /></label>
             </div>
             {showTls && (
               <div className="field-group">
                 <div className="group-title">{t("lblTlsSection")}</div>
-                <label>{t("lblCaCert")} <input value={p.caCertPath} onChange={(e) => upd("caCertPath", e.target.value)} /></label>
+                <label>{t("lblCaCert")} <input {...identifierInput} value={p.caCertPath} onChange={(e) => upd("caCertPath", e.target.value)} /></label>
                 <label className="row-check"><input type="checkbox" checked={p.useSystemCAs} onChange={(e) => upd("useSystemCAs", e.target.checked)} /> {t("lblSystemCa")}</label>
                 <label className="row-check"><input type="checkbox" checked={p.skipVerify} onChange={(e) => upd("skipVerify", e.target.checked)} /> {t("lblSkipVerify")}</label>
               </div>
@@ -183,13 +184,13 @@ export function ConnectionForm({ editProfile, onClose, onSaved, onConnected }: {
             {showWs && (
               <div className="field-group">
                 <div className="group-title">WS</div>
-                <label>{t("lblWsPath")} <input value={p.wsPath} onChange={(e) => upd("wsPath", e.target.value)} /></label>
+                <label>{t("lblWsPath")} <input {...identifierInput} value={p.wsPath} onChange={(e) => upd("wsPath", e.target.value)} /></label>
               </div>
             )}
             <div className="field-group">
               <div className="group-title">{t("lblLwtSection")}</div>
-              <label>{t("lblWillTopic")} <input value={p.willTopic} onChange={(e) => upd("willTopic", e.target.value)} /></label>
-              <label>{t("lblWillPayload")} <input value={p.willPayload} onChange={(e) => upd("willPayload", e.target.value)} /></label>
+              <label>{t("lblWillTopic")} <input {...identifierInput} value={p.willTopic} onChange={(e) => upd("willTopic", e.target.value)} /></label>
+              <label>{t("lblWillPayload")} <input {...identifierInput} value={p.willPayload} onChange={(e) => upd("willPayload", e.target.value)} /></label>
               <label>{t("lblWillQos")}
                 <select value={p.willQos} onChange={(e) => upd("willQos", +e.target.value)}>
                   <option value={0}>0</option><option value={1}>1</option><option value={2}>2</option>

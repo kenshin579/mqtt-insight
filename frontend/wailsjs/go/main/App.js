@@ -70,6 +70,10 @@ export function SaveSettings(arg1) {
   return window['go']['main']['App']['SaveSettings'](arg1);
 }
 
+export function SetFocus(arg1) {
+  return window['go']['main']['App']['SetFocus'](arg1);
+}
+
 export function Subscribe(arg1, arg2) {
   return window['go']['main']['App']['Subscribe'](arg1, arg2);
 }

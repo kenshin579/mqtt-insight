@@ -1,24 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FixedSizeList } from "react-window";
 import { useAppStore } from "../store/appStore";
-import { History, QueryRecorded } from "../../wailsjs/go/main/App";
+import { QueryRecorded } from "../../wailsjs/go/main/App";
 import { bytesToString } from "../lib/payload";
 import { formatTime, useNowTick } from "../lib/time";
 import { t } from "../lib/i18n";
 import { MessageDetail } from "./MessageDetail";
+import { SubtreeSummary } from "./SubtreeSummary";
 import { SearchBar } from "./SearchBar";
 import { SegmentedControl } from "./SegmentedControl";
 import type { Message } from "../types";
 
-const RATE_WINDOW_MS = 5000;
-const ALL_TOPICS_CAP = 150; // F12
-
 export function MessageList() {
   const selectedTopic = useAppStore((s) => s.selectedTopic);
-  const liveMessages = useAppStore((s) => s.liveMessages);
+  const selectedIsLeaf = useAppStore((s) => s.selectedIsLeaf);
+  const summaryTopic = useAppStore((s) => s.summaryTopic);
+  const focusMessages = useAppStore((s) => s.focusMessages);
+  const dropped = useAppStore((s) => s.dropped);
+  const rate = useAppStore((s) => s.rate);
   const paused = useAppStore((s) => s.paused);
   const togglePaused = useAppStore((s) => s.togglePaused);
-  const clearedAt = useAppStore((s) => s.clearedAt);
   const clearMessages = useAppStore((s) => s.clearMessages);
   const recording = useAppStore((s) => s.recording);
   const msgSource = useAppStore((s) => s.msgSource);
@@ -29,13 +30,9 @@ export function MessageList() {
   const selectedMsg = useAppStore((s) => s.selectedMsg);
   const selectMsg = useAppStore((s) => s.selectMsg);
   const settings = useAppStore((s) => s.settings);
-  const tree = useAppStore((s) => s.tree);
 
-  const [history, setHistory] = useState<Message[]>([]);
   const [recorded, setRecorded] = useState<Message[]>([]);
-
   const isRecordable = !!selectedTopic && recording.has(selectedTopic);
-  const hasTree = !!(tree?.children && tree.children.length);
 
   // G13: stuck guard — if the topic stops being recordable (or is deselected) while
   // viewing Recorded, the Live/Recorded toggle disappears; fall back to live so the
@@ -43,13 +40,6 @@ export function MessageList() {
   useEffect(() => {
     if (!isRecordable && msgSource === "recorded") setMsgSource("live");
   }, [isRecordable, msgSource, setMsgSource]);
-
-  // G12: for a selected topic, the backend ring buffer (History) is authoritative and
-  // already includes live messages; refetch whenever new live messages arrive.
-  useEffect(() => {
-    if (!selectedTopic) { setHistory([]); return; }
-    History(selectedTopic).then((h) => setHistory((h || []) as unknown as Message[]));
-  }, [selectedTopic, liveMessages]);
 
   function loadRecorded() {
     if (!selectedTopic) return;
@@ -65,39 +55,29 @@ export function MessageList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgSource, selectedTopic]);
 
-  const sourceRows: Message[] = useMemo(() => {
-    if (msgSource === "recorded") return recorded;
-    if (selectedTopic) return history;
-    return liveMessages.slice(-ALL_TOPICS_CAP); // F12
-  }, [msgSource, recorded, selectedTopic, history, liveMessages]);
+  // Live rows are pushed by the backend for the focused subtree only — no polling.
+  const sourceRows: Message[] = msgSource === "recorded" ? recorded : focusMessages;
 
-  // F3: clear only affects display — filter out anything at/before the clear timestamp.
-  const clearThreshold = clearedAt[selectedTopic ?? ""] ?? 0;
-  const clearedRows = useMemo(
-    () => (clearThreshold ? sourceRows.filter((m) => new Date(m.timestamp).getTime() > clearThreshold) : sourceRows),
-    [sourceRows, clearThreshold],
-  );
-
-  // F24: pause freezes the displayed rows at a snapshot; ingestion/History/msg-s continue live.
+  // F24: pause freezes the displayed rows at a snapshot; ingestion continues live.
   const snapshotRef = useRef<Message[]>([]);
   const wasPaused = useRef(false);
-  if (paused && !wasPaused.current) snapshotRef.current = clearedRows;
+  if (paused && !wasPaused.current) snapshotRef.current = sourceRows;
   wasPaused.current = paused;
-  const baseRows = msgSource === "recorded" ? clearedRows : paused ? snapshotRef.current : clearedRows;
+  const baseRows = msgSource === "recorded" ? sourceRows : paused ? snapshotRef.current : sourceRows;
 
-  // F1 completion: once rows load for a selected topic with nothing selected yet, pick the newest.
+  // F1: once rows exist for a selected topic with nothing selected yet, pick the newest.
   useEffect(() => {
     if (selectedTopic && !selectedMsg && baseRows.length > 0) selectMsg(baseRows[baseRows.length - 1]);
   }, [selectedTopic, selectedMsg, baseRows, selectMsg]);
 
-  // C26/C27/F9: live payload (+ topic, in the all-topics view) substring search, case-insensitive.
+  // C26/C27/F9: payload search; topic search too when a subtree is selected.
   const q = searchQuery.trim().toLowerCase();
   const filtered = useMemo(() => {
     if (!q) return baseRows;
     return baseRows.filter(
-      (m) => bytesToString(m.payload).toLowerCase().includes(q) || (!selectedTopic && m.topic.toLowerCase().includes(q)),
+      (m) => bytesToString(m.payload).toLowerCase().includes(q) || (!selectedIsLeaf && m.topic.toLowerCase().includes(q)),
     );
-  }, [baseRows, q, selectedTopic]);
+  }, [baseRows, q, selectedIsLeaf]);
 
   // D61: newest-first by default; oldest-first reverses the render order only.
   const displayRows = settings.messageOrder === "oldest" ? filtered : filtered.slice().reverse();
@@ -114,25 +94,10 @@ export function MessageList() {
 
   useNowTick(settings.timestampFormat === "relative"); // F25
 
-  // F4: global 5s-window message rate, ticked every second so it decays back to 0.
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => tick((v) => v + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const recentCount = useMemo(() => {
-    const cut = Date.now() - RATE_WINDOW_MS;
-    return liveMessages.reduce(
-      (n, m) =>
-        new Date(m.timestamp).getTime() > cut && (!selectedTopic || m.topic === selectedTopic) ? n + 1 : n,
-      0,
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveMessages, selectedTopic]);
-  const msgRate = (recentCount / (RATE_WINDOW_MS / 1000)).toFixed(1);
-  const showRate = recentCount > 0;
+  // Rate comes from the backend, so it is no longer bounded by what the UI buffers.
+  const shownRate = selectedTopic ? rate.focused : rate.global;
 
-  // A13/B31: 3 empty states — search-no-match takes priority, then unselected, then no-messages.
+  // A13/B31: search-no-match takes priority, then unselected, then no-messages.
   let emptyIcon = "", emptyTitle = "", emptyHint = "";
   if (q && baseRows.length > 0 && displayRows.length === 0) {
     emptyIcon = "⌕"; emptyTitle = t("searchNoRes"); emptyHint = t("searchNoResHint");
@@ -159,10 +124,11 @@ export function MessageList() {
   return (
     <div className="msg-list">
       <div className="msg-toolbar">
-        <span className={"toolbar-topic mono" + (selectedTopic ? " accent" : " dim")}>
-          {selectedTopic || t("headerAll")}
+        <span className={"toolbar-topic mono" + (selectedTopic || summaryTopic ? " accent" : " dim")}>
+          {selectedTopic || summaryTopic || t("headerNone")}
         </span>
-        {showRate && <span className="msg-rate mono">{msgRate} msg/s</span>}
+        {shownRate > 0 && !summaryTopic && <span className="msg-rate mono">{shownRate.toFixed(1)} msg/s</span>}
+        {dropped > 0 && <span className="msg-drop mono">{t("droppedRows", { n: dropped })}</span>}
         {isRecordable && (
           <>
             <span className="rec-badge">● {t("recBadge")}</span>
@@ -178,7 +144,7 @@ export function MessageList() {
           </>
         )}
         <span className="spacer" />
-        {hasTree && (
+        {selectedTopic && (
           <>
             <button
               className={"msg-tool-btn" + (searchOpen ? " on" : "")}
@@ -194,18 +160,20 @@ export function MessageList() {
                 <button className={"msg-tool-btn" + (paused ? " on" : "")} onClick={togglePaused}>
                   {paused ? t("btnResume") : t("btnPause")}
                 </button>
-                <button className="msg-tool-btn" onClick={() => clearMessages(selectedTopic)}>{t("btnClear")}</button>
+                <button className="msg-tool-btn" onClick={() => clearMessages()}>{t("btnClear")}</button>
               </>
             )}
           </>
         )}
       </div>
 
-      {searchOpen && <SearchBar matches={displayRows.length} total={baseRows.length} />}
+      {searchOpen && selectedTopic && <SearchBar matches={displayRows.length} total={baseRows.length} />}
 
       <div className="msg-split">
         <div className="msg-rows-pane" ref={areaRef}>
-          {displayRows.length === 0 ? (
+          {summaryTopic ? (
+            <SubtreeSummary topic={summaryTopic} />
+          ) : displayRows.length === 0 ? (
             <div className="msg-empty">
               <div className="empty-state">
                 <span className="empty-icon">{emptyIcon}</span>
@@ -221,7 +189,7 @@ export function MessageList() {
                 return (
                   <div style={style} className={"msg-row" + (isSel ? " sel" : "")} onClick={() => selectMsg(m)}>
                     <span className="mr-time">{formatTime(m.timestamp, settings.timestampFormat, settings.lang)}</span>
-                    {!selectedTopic && <span className="mr-topic">{m.topic}</span>}
+                    {!selectedIsLeaf && <span className="mr-topic">{m.topic}</span>}
                     <span className="mr-preview">{bytesToString(m.payload).slice(0, 60)}</span>
                     {m.retained && <span className="r-badge" title={t("retainedTip")}>R</span>}
                     <span className="mr-qos" title={t("qosTip")}>q{m.qos}</span>
@@ -231,7 +199,7 @@ export function MessageList() {
             </FixedSizeList>
           )}
         </div>
-        {selectedMsg && <MessageDetail msg={selectedMsg} prev={prevMsg} rows={baseRows} />}
+        {selectedMsg && !summaryTopic && <MessageDetail msg={selectedMsg} prev={prevMsg} rows={baseRows} />}
       </div>
     </div>
   );
