@@ -26,7 +26,7 @@ make release VERSION=v0.2.0 FORCE=1   # 기존 릴리스·태그 삭제 후 재�
 ## 릴리스 후 검증
 
 - 릴리스 페이지: macOS zip / Windows installer·portable 3개 첨부 + 자동 노트
-- 설치 스모크: macOS zip 받아 실행(우클릭-열기 또는 `xattr -cr`), 설정 모달 푸터 버전 = 태그 확인
+- 설치 스모크: macOS zip 받아 실행(우클릭-열기 또는 `xattr -cr`), 타이틀바 버전 pill = 태그 확인
 
 ## 수동 절차 (참고 — 스크립트가 하는 일)
 
