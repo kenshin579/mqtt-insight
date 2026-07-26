@@ -9,7 +9,10 @@ body, #root, #App { margin: 0; height: 100vh; background: var(--bg); color: var(
 .tl-dots i:nth-child(2) { background: #febc2e; }
 .tl-dots i:nth-child(3) { background: #28c840; }
 .titlebar .app-icon { display: flex; margin-left: 6px; }
-.titlebar .app-name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; }
+/* Pinned so the pill below is the only thing that gives way. Left shrinkable
+   this competes for the same negative space, and without nowrap it wraps to a
+   second line inside a fixed 38px bar rather than truncating. */
+.titlebar .app-name { font-size: 12.5px; font-weight: 600; letter-spacing: .2px; white-space: nowrap; flex: none; }
 /* flex-shrink must stay 1: with `flex: none` the ellipsis below can never fire,
    because flexbox only truncates items it is allowed to shrink. min-width: 0
    lifts the default min-content floor so the shrink can actually reach the
